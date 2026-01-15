@@ -1,0 +1,16 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:18
+    container_name: hms-postgres
+    environment:
+      POSTGRES_USER: charith      # Must match spring.datasource.username
+      POSTGRES_PASSWORD: 1234     # Must match spring.datasource.password
+      POSTGRES_DB: patient_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
