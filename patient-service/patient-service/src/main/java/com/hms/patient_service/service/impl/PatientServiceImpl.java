@@ -6,7 +6,6 @@ import com.hms.patient_service.model.Patient;
 import com.hms.patient_service.repository.PatientRepository;
 import com.hms.patient_service.service.PatientService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -56,6 +55,7 @@ public class PatientServiceImpl implements PatientService {
         existing.setLastName(patientDTO.getLastName());
         existing.setEmail(patientDTO.getEmail());
         existing.setPhoneNumber(patientDTO.getPhoneNumber());
+        existing.setAddress(patientDTO.getAddress());
 
         Patient updated = patientRepository.save(existing);
         return mapToDTO(updated);
@@ -83,6 +83,9 @@ public class PatientServiceImpl implements PatientService {
         dto.setLastName(patient.getLastName());
         dto.setEmail(patient.getEmail());
         dto.setPhoneNumber(patient.getPhoneNumber());
+        dto.setAddress(patient.getAddress());
+        dto.setCreatedAt(patient.getCreatedAt());
+        dto.setUpdatedAt(patient.getUpdatedAt());
         return dto;
     }
 }
