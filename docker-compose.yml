@@ -4,13 +4,14 @@ services:
     image: postgres:18
     container_name: hms-postgres
     environment:
-      POSTGRES_USER: charith      # Must match spring.datasource.username
-      POSTGRES_PASSWORD: 1234     # Must match spring.datasource.password
+      POSTGRES_USER: charith
+      POSTGRES_PASSWORD: 1234
       POSTGRES_DB: patient_db
+      PGDATA: /var/lib/postgresql/data/pgdata
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
 
   mysql:
     image: mysql:8.0
@@ -19,10 +20,24 @@ services:
       MYSQL_ROOT_PASSWORD: 1234
       MYSQL_DATABASE: doctor_db
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+
+  postgres-appointment:
+    image: postgres:18
+    container_name: hms-postgres-appointment
+    environment:
+      POSTGRES_USER: charith
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: appointment_db
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5433:5432"
+    volumes:
+      - appointment_data:/var/lib/postgresql
 
 volumes:
   postgres_data:
   mysql_data:
+  appointment_data:
