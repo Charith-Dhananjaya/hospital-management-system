@@ -79,6 +79,7 @@ public class PatientServiceImpl implements PatientService {
 
     private PatientDTO mapToDTO(Patient patient) {
         PatientDTO dto = new PatientDTO();
+        dto.setId(patient.getId());
         dto.setFirstName(patient.getFirstName());
         dto.setLastName(patient.getLastName());
         dto.setEmail(patient.getEmail());
