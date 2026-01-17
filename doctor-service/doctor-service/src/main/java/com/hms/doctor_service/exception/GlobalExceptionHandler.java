@@ -1,7 +1,5 @@
 package com.hms.doctor_service.exception;
 
-import com.hms.patient_service.exception.ErrorDetails;
-import com.hms.patient_service.exception.ResourceNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
