@@ -5,12 +5,14 @@ import com.hms.appointment_service.client.PatientClient;
 import com.hms.appointment_service.dto.AppointmentDTO;
 import com.hms.appointment_service.dto.DoctorDTO;
 import com.hms.appointment_service.dto.PatientDTO;
+import com.hms.appointment_service.event.AppointmentBookedEvent;
 import com.hms.appointment_service.exception.ResourceNotFoundException;
 import com.hms.appointment_service.model.Appointment;
 import com.hms.appointment_service.model.AppointmentStatus;
 import com.hms.appointment_service.repository.AppointmentRepository;
 import com.hms.appointment_service.service.AppointmentService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,12 +25,14 @@ public class AppointmentServiceImpl implements AppointmentService {
     private final AppointmentRepository repository;
     private final PatientClient patientClient;
     private final DoctorClient doctorClient;
+    private final RabbitTemplate rabbitTemplate;
 
     @Override
     public AppointmentDTO createAppointment(AppointmentDTO dto) {
 
         PatientDTO patient = patientClient.getPatientById(dto.getPatientId());
         DoctorDTO doctor = doctorClient.getDoctorById(dto.getDoctorId());
+
 
         Appointment appointment = new Appointment();
         appointment.setPatientId(dto.getPatientId());
@@ -37,7 +41,21 @@ public class AppointmentServiceImpl implements AppointmentService {
         appointment.setReasonForVisit(dto.getReasonForVisit());
         appointment.setStatus(AppointmentStatus.SCHEDULED);
 
-        return mapToDTO(repository.save(appointment));
+        Appointment savedAppointment = repository.save(appointment);
+
+        // 3. SEND NOTIFICATION (The New Part!) ---------------------------
+
+        AppointmentBookedEvent event = new AppointmentBookedEvent(
+                savedAppointment.getId(),
+                "test@gmail.com",
+                "Your appointment is confirmed!"
+        );
+
+        // We drop the letter in the box
+        rabbitTemplate.convertAndSend("internal.exchange", "internal.notification", event);
+        System.out.println("Message sent to RabbitMQ!");
+
+        return mapToDTO(savedAppointment);
     }
 
     @Override
