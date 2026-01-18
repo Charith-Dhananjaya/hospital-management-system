@@ -1,6 +1,10 @@
 package com.hms.appointment_service.service.impl;
 
+import com.hms.appointment_service.client.DoctorClient;
+import com.hms.appointment_service.client.PatientClient;
 import com.hms.appointment_service.dto.AppointmentDTO;
+import com.hms.appointment_service.dto.DoctorDTO;
+import com.hms.appointment_service.dto.PatientDTO;
 import com.hms.appointment_service.exception.ResourceNotFoundException;
 import com.hms.appointment_service.model.Appointment;
 import com.hms.appointment_service.model.AppointmentStatus;
@@ -17,9 +21,15 @@ import java.util.stream.Collectors;
 public class AppointmentServiceImpl implements AppointmentService {
 
     private final AppointmentRepository repository;
+    private final PatientClient patientClient;
+    private final DoctorClient doctorClient;
 
     @Override
     public AppointmentDTO createAppointment(AppointmentDTO dto) {
+
+        PatientDTO patient = patientClient.getPatientById(dto.getPatientId());
+        DoctorDTO doctor = doctorClient.getDoctorById(dto.getDoctorId());
+
         Appointment appointment = new Appointment();
         appointment.setPatientId(dto.getPatientId());
         appointment.setDoctorId(dto.getDoctorId());
