@@ -47,13 +47,13 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         AppointmentBookedEvent event = new AppointmentBookedEvent(
                 savedAppointment.getId(),
-                "test@gmail.com",
-                "Your appointment is confirmed!"
+                patient.getEmail(),
+                "Hello " + patient.getName() + ", your appointment with Dr. " + doctor.getName() + " is confirmed!"
         );
 
         // We drop the letter in the box
         rabbitTemplate.convertAndSend("internal.exchange", "internal.notification", event);
-        System.out.println("Message sent to RabbitMQ!");
+        System.out.println("Message sent to RabbitMQ for: " + patient.getEmail());
 
         return mapToDTO(savedAppointment);
     }
