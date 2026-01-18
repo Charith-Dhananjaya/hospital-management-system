@@ -48,7 +48,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         AppointmentBookedEvent event = new AppointmentBookedEvent(
                 savedAppointment.getId(),
                 patient.getEmail(),
-                "Hello " + patient.getName() + ", your appointment with Dr. " + doctor.getName() + " is confirmed!"
+                "Hello " + patient.getFirstName() + ", your appointment with Dr. " + doctor.getName() + " is confirmed!"
         );
 
         // We drop the letter in the box
