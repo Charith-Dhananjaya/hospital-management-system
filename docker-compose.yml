@@ -59,7 +59,7 @@ services:
     container_name: hms-discovery
     build: ./discovery-server/discovery-server
     ports:
-      - "8761:8761"
+      - "8762:8762"
     networks:
       - hms-network
 
