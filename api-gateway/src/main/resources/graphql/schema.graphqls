@@ -14,7 +14,7 @@ type AppointmentResponse {
 
 type Patient {
     id: ID
-    name: String
+    firstName: String
     email: String
 }
 
