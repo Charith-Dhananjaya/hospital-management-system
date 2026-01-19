@@ -1,0 +1,25 @@
+type Query {
+    # Get one appointment with all details
+    appointmentById(id: ID): AppointmentResponse
+}
+
+# The combined result we want to send back
+type AppointmentResponse {
+    id: ID
+    appointmentTime: String
+    reasonForVisit: String
+    patient: Patient
+    doctor: Doctor
+}
+
+type Patient {
+    id: ID
+    name: String
+    email: String
+}
+
+type Doctor {
+    id: ID
+    name: String
+    specialization: String
+}
