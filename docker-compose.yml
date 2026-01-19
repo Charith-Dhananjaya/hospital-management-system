@@ -54,6 +54,32 @@ services:
     networks:
       - hms-network
 
+  discovery-server:
+    image: discovery-server:latest
+    container_name: hms-discovery
+    build: ./discovery-server/discovery-server
+    ports:
+      - "8761:8761"
+    networks:
+      - hms-network
+
+  notification-service:
+    image: notification-service:latest
+    container_name: hms-notification
+    build: ./notification-service/notification-service
+    ports:
+      - "8083:8083"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - GMAIL_ADDRESS=${GMAIL_ADDRESS}
+      - GMAIL_PASSWORD=${GMAIL_PASSWORD}
+    networks:
+      - hms-network
+    depends_on:
+      - rabbitmq
+      - discovery-server
+
 volumes:
   postgres_data:
   mysql_data:
