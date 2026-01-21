@@ -1,5 +1,7 @@
 package com.hms.user_service.controller;
 
+import com.hms.user_service.dto.LoginRequest;
+import com.hms.user_service.dto.LoginResponse;
 import com.hms.user_service.dto.UserDTO;
 import com.hms.user_service.dto.UserResponse;
 import com.hms.user_service.service.UserService;
@@ -16,5 +18,10 @@ public class UserController {
     @PostMapping("/register")
     public UserResponse register(@RequestBody UserDTO userDTO) {
         return userService.registerUser(userDTO);
+    }
+
+    @PostMapping("/login")
+    public LoginResponse login(@RequestBody LoginRequest loginRequest) {
+        return userService.login(loginRequest);
     }
 }
