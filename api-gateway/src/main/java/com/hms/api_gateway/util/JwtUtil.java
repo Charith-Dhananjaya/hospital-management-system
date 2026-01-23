@@ -1,5 +1,6 @@
 package com.hms.api_gateway.util;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -19,6 +20,18 @@ public class JwtUtil {
                 .verifyWith(getSignKey())
                 .build()
                 .parseSignedClaims(token);
+    }
+
+    public Claims extractAllClaims(String token) {
+        return Jwts.parser()
+                .verifyWith(getSignKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+    }
+
+    public String extractUsername(String token) {
+        return extractAllClaims(token).getSubject();
     }
 
     private SecretKey getSignKey() {

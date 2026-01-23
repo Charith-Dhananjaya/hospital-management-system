@@ -15,8 +15,17 @@ public class PatientController {
     private final PatientService patientService;
 
     @PostMapping
-    public PatientDTO create(@RequestBody PatientDTO dto) {
+    public PatientDTO create(@RequestBody PatientDTO dto,
+                             @RequestHeader("X-User-Email") String userEmail) {
+
+        dto.setEmail(userEmail);
         return patientService.createPatient(dto);
+    }
+
+
+    @GetMapping("/my-profile")
+    public PatientDTO getMyProfile(@RequestHeader("X-User-Email") String userEmail) {
+        return patientService.getPatientByEmail(userEmail);
     }
 
     @GetMapping

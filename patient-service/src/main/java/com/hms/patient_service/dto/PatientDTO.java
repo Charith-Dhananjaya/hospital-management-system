@@ -13,11 +13,15 @@ public class PatientDTO {
 
     private String lastName;
 
+    private int age;
+
     private String email;
 
     private String phoneNumber;
 
     private String address;
+
+    private String medicalHistory;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
