@@ -24,12 +24,17 @@ public class Patient {
     @NotNull
     private String lastName;
 
+    @NotNull
+    private int age;
+
     private String email;
 
     @NotNull
     private String phoneNumber;
 
     private String address;
+
+    private String medicalHistory;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

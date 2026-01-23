@@ -22,13 +22,22 @@ public class PatientServiceImpl implements PatientService {
         Patient patient = new Patient();
         patient.setFirstName(patientDTO.getFirstName());
         patient.setLastName(patientDTO.getLastName());
+        patient.setAge(patientDTO.getAge());
         patient.setEmail(patientDTO.getEmail());
         patient.setPhoneNumber(patientDTO.getPhoneNumber());
         patient.setAddress(patientDTO.getAddress());
+        patient.setMedicalHistory(patientDTO.getMedicalHistory());
 
         Patient savedPatient = patientRepository.save(patient);
 
         return mapToDTO(savedPatient);
+    }
+
+    @Override
+    public PatientDTO getPatientByEmail(String email) {
+        Patient patient = patientRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Patient profile not found for email: " + email));
+        return mapToDTO(patient);
     }
 
     @Override
@@ -53,9 +62,11 @@ public class PatientServiceImpl implements PatientService {
 
         existing.setFirstName(patientDTO.getFirstName());
         existing.setLastName(patientDTO.getLastName());
+        existing.setAge(patientDTO.getAge());
         existing.setEmail(patientDTO.getEmail());
         existing.setPhoneNumber(patientDTO.getPhoneNumber());
         existing.setAddress(patientDTO.getAddress());
+        existing.setMedicalHistory(patientDTO.getMedicalHistory());
 
         Patient updated = patientRepository.save(existing);
         return mapToDTO(updated);
@@ -82,9 +93,11 @@ public class PatientServiceImpl implements PatientService {
         dto.setId(patient.getId());
         dto.setFirstName(patient.getFirstName());
         dto.setLastName(patient.getLastName());
+        dto.setAge(patient.getAge());
         dto.setEmail(patient.getEmail());
         dto.setPhoneNumber(patient.getPhoneNumber());
         dto.setAddress(patient.getAddress());
+        dto.setMedicalHistory(patient.getMedicalHistory());
         dto.setCreatedAt(patient.getCreatedAt());
         dto.setUpdatedAt(patient.getUpdatedAt());
         return dto;
