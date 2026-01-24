@@ -10,4 +10,7 @@ public interface DoctorService {
     DoctorDTO updateDoctor(Long id, DoctorDTO doctorDTO);
     DoctorDTO updateAvailability(Long id, Boolean isAvailable);
     void deleteDoctor(Long id);
+    List<DoctorDTO> getDoctorsBySpecialization(String specialization);
+    List<DoctorDTO> getDoctorsByAvailability(boolean status);
+    DoctorDTO getDoctorByEmail(String email);
 }

@@ -23,10 +23,15 @@ public class Doctor {
 
     @NotNull
     private String phoneNumber;
+
+    @Column(unique = true, nullable = false)
     private String email;
 
     @NotNull
     private String specialization;
+
+    private String qualifications;
+    private double consultationFee;
 
     @NotNull
     private Boolean isAvailable;
