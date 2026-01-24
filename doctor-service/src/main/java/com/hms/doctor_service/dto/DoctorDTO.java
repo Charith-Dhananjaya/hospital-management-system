@@ -12,6 +12,8 @@ public class DoctorDTO {
     private String phoneNumber;
     private String email;
     private String specialization;
+    private String qualifications;
+    private double consultationFee;
     private Boolean isAvailable;
 
     private LocalDateTime createdAt;
