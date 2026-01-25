@@ -27,6 +27,7 @@ public class Patient {
     @NotNull
     private int age;
 
+    @Column(unique = true, nullable = false)
     private String email;
 
     @NotNull
