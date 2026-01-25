@@ -18,6 +18,7 @@ public class Appointment {
     private Long id;
 
     private Long patientId;
+    private String patientEmail;
     private Long doctorId;
 
     private LocalDateTime appointmentTime;
@@ -33,7 +34,7 @@ public class Appointment {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         if (status == null) {
-            status = AppointmentStatus.SCHEDULED;
+            status = AppointmentStatus.PENDING;
         }
     }
 }
