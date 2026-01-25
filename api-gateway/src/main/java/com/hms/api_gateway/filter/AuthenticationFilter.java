@@ -77,6 +77,20 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
                             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Only Patients can book appointments");
                         }
                     }
+                    // --- RULE 4: MEDICAL RECORDS ---
+                    if (path.contains("/api/medical-records")) {
+
+                        // 1. STRICT WRITE PROTECTION (POST, PUT, DELETE)
+                        if (method.equals("POST") || method.equals("PUT") || method.equals("DELETE")) {
+                            if (!role.equals("DOCTOR")) {
+                                System.out.println("⛔ BLOCKED: " + role + " tried to " + method + " Medical Record"); // Debug log
+                                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Only Doctors can modify medical records");
+                            }
+                        }
+
+                        // 2. READ ACCESS (GET)
+                        // (Allowed for everyone for now, or refine to allow Patients only their own ID)
+                    }
 
                     ServerHttpRequest request = exchange.getRequest()
                             .mutate()

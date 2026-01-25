@@ -37,9 +37,10 @@ public class AppointmentServiceImpl implements AppointmentService {
         Appointment appointment = new Appointment();
         appointment.setPatientId(dto.getPatientId());
         appointment.setDoctorId(dto.getDoctorId());
+        appointment.setPatientEmail(patient.getEmail());
         appointment.setAppointmentTime(dto.getAppointmentTime());
         appointment.setReasonForVisit(dto.getReasonForVisit());
-        appointment.setStatus(AppointmentStatus.PENDING);
+        appointment.setStatus(AppointmentStatus.SCHEDULED);
 
         Appointment savedAppointment = repository.save(appointment);
 
@@ -85,10 +86,49 @@ public class AppointmentServiceImpl implements AppointmentService {
         Appointment existing = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with ID: " + id));
 
-        existing.setAppointmentTime(dto.getAppointmentTime());
-        existing.setReasonForVisit(dto.getReasonForVisit());
+        boolean doctorChanged = dto.getDoctorId() != null && !dto.getDoctorId().equals(existing.getDoctorId());
+        boolean timeChanged = dto.getAppointmentTime() != null && !dto.getAppointmentTime().equals(existing.getAppointmentTime());
+        boolean reasonChanged = dto.getReasonForVisit() != null && !dto.getReasonForVisit().equals(existing.getReasonForVisit());
 
-        return mapToDTO(repository.save(existing));
+        if (!doctorChanged && !timeChanged && !reasonChanged) {
+            return mapToDTO(existing);
+        }
+
+        DoctorDTO doctorForMessage = null;
+
+        if (doctorChanged) {
+
+            doctorForMessage = doctorClient.getDoctorById(dto.getDoctorId());
+            existing.setDoctorId(dto.getDoctorId());
+        }
+
+        if (timeChanged) {
+            existing.setAppointmentTime(dto.getAppointmentTime());
+        }
+
+        if (reasonChanged) {
+            existing.setReasonForVisit(dto.getReasonForVisit());
+        }
+
+        Appointment saved = repository.save(existing);
+
+
+        if (doctorForMessage == null) {
+            doctorForMessage = doctorClient.getDoctorById(saved.getDoctorId());
+        }
+
+        String message = "Your appointment has been updated with Dr. " + doctorForMessage.getName()
+                + ". Scheduled time: " + saved.getAppointmentTime() + ".";
+
+        AppointmentBookedEvent event = new AppointmentBookedEvent(
+                saved.getId(),
+                saved.getPatientEmail(),
+                message
+        );
+
+        rabbitTemplate.convertAndSend("internal.exchange", "internal.notification", event);
+
+        return mapToDTO(saved);
     }
 
     @Override
@@ -96,8 +136,23 @@ public class AppointmentServiceImpl implements AppointmentService {
         Appointment existing = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with ID: " + id));
 
+
+        if (existing.getStatus() == AppointmentStatus.CANCELLED) {
+            return;
+        }
+
         existing.setStatus(AppointmentStatus.CANCELLED);
-        repository.save(existing);
+        Appointment saved = repository.save(existing);
+
+        String message = "Your appointment on " + saved.getAppointmentTime() + " has been cancelled.";
+
+        AppointmentBookedEvent event = new AppointmentBookedEvent(
+                saved.getId(),
+                saved.getPatientEmail(),
+                message
+        );
+
+        rabbitTemplate.convertAndSend("internal.exchange", "internal.notification", event);
     }
 
     private AppointmentDTO mapToDTO(Appointment appointment) {

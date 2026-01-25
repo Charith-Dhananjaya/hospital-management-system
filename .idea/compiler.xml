@@ -20,6 +20,7 @@
         <module name="patient-service" />
         <module name="user-service" />
         <module name="appointment-service" />
+        <module name="medical-record-service" />
         <module name="notification-service" />
         <module name="doctor-service" />
       </profile>
@@ -31,6 +32,7 @@
       <module name="appointment-service" options="-parameters" />
       <module name="discovery-server" options="-parameters" />
       <module name="doctor-service" options="-parameters" />
+      <module name="medical-record-service" options="-parameters" />
       <module name="notification-service" options="-parameters" />
       <module name="patient-service" options="-parameters" />
       <module name="user-service" options="-parameters" />
