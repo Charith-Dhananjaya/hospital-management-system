@@ -50,10 +50,11 @@ public class UserServiceImpl implements UserService {
 
         if (authenticate.isAuthenticated()) {
 
-            String token = jwtService.generateToken(loginRequest.getEmail());
-
             User user = userRepository.findByEmail(loginRequest.getEmail())
                     .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + loginRequest.getEmail()));
+
+            String token = jwtService.generateToken(loginRequest.getEmail(), user.getRole().name());
+
 
             return new LoginResponse(
                     "Login Successful!",

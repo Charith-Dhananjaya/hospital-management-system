@@ -34,21 +34,60 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
                 String token = authHeader.substring(7);
 
                 try {
-
                     jwtUtil.validateToken(token);
-
                     String userEmail = jwtUtil.extractUsername(token);
+                    String role = jwtUtil.extractRole(token);
 
+                    String path = exchange.getRequest().getURI().getPath();
+                    String method = exchange.getRequest().getMethod().name();
+
+                    // --- RULE 1: PATIENT ROUTES (/api/patients) ---
+                    if (path.contains("/api/patients")) {
+                        // Scenario A: Patients (Can do anything: GET, PUT, etc.)
+                        if (role.equals("PATIENT")) {
+                            // Allowed
+                        }
+                        // Scenario B: Doctors (Can only VIEW/GET patient data)
+                        // ✅ This fixes your issue!
+                        else if (role.equals("DOCTOR") && method.equals("GET")) {
+                            // Allowed (Read-Only)
+                        }
+                        // Scenario C: Everyone else (or Doctors trying to Edit)
+                        else {
+                            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Patients Only (Doctors can View)");
+                        }
+                    }
+
+                    // --- RULE 2: DOCTOR ROUTES (/api/doctors) ---
+                    if (path.contains("/api/doctors")) {
+                        // Allow searching (GET) for everyone, but Editing is Doctor only
+                        if (method.equals("GET")) {
+
+                        } else {
+                            if (!role.equals("DOCTOR")) {
+                                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Doctors Only");
+                            }
+                        }
+                    }
+
+                    // --- RULE 3: APPOINTMENTS ---
+                    // Only Patients can BOOK (POST) appointments
+                    if (path.contains("/api/appointments") && method.equals("POST")) {
+                        if (!role.equals("PATIENT")) {
+                            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Only Patients can book appointments");
+                        }
+                    }
 
                     ServerHttpRequest request = exchange.getRequest()
                             .mutate()
                             .header("X-User-Email", userEmail)
+                            .header("X-User-Role", role)
                             .build();
 
                     return chain.filter(exchange.mutate().request(request).build());
 
                 } catch (Exception e) {
-                    throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid Token");
+                    throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid Token or Access Denied");
                 }
             }
             return chain.filter(exchange);
