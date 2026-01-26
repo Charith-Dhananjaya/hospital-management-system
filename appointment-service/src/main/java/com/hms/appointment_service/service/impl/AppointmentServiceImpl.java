@@ -11,6 +11,8 @@ import com.hms.appointment_service.model.Appointment;
 import com.hms.appointment_service.model.AppointmentStatus;
 import com.hms.appointment_service.repository.AppointmentRepository;
 import com.hms.appointment_service.service.AppointmentService;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
@@ -28,6 +30,8 @@ public class AppointmentServiceImpl implements AppointmentService {
     private final RabbitTemplate rabbitTemplate;
 
     @Override
+    @Transactional
+    @CircuitBreaker(name = "doctor-service-breaker", fallbackMethod = "doctorServiceFallback")
     public AppointmentDTO createAppointment(AppointmentDTO dto) {
 
         PatientDTO patient = patientClient.getPatientById(dto.getPatientId());
@@ -57,6 +61,11 @@ public class AppointmentServiceImpl implements AppointmentService {
         System.out.println("Message sent to RabbitMQ for: " + patient.getEmail());
 
         return mapToDTO(savedAppointment);
+    }
+    public AppointmentDTO doctorServiceFallback(AppointmentDTO dto, Throwable t) {
+        System.out.println("⚠️ Circuit Breaker Tripped! Doctor Service is unreachable.");
+
+        throw new ResourceNotFoundException("Doctor Service is currently down. Please try again later. (Circuit Breaker Active)");
     }
 
     @Override
