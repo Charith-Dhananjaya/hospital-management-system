@@ -9,6 +9,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class AppointmentBookedEvent {
     private Long appointmentId;
-    private String patientEmail; // Ideally we get this from Patient Service
+    private String patientEmail;
     private String message;
 }

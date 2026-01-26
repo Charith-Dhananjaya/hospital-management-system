@@ -1,7 +1,7 @@
 package com.hms.appointment_service.model;
 
 public enum AppointmentStatus {
-    PENDING,
+    SCHEDULED,
     CONFIRMED,
     CANCELLED,
     COMPLETED

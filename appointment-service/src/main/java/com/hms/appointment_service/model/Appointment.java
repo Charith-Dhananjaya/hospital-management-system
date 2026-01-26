@@ -34,7 +34,7 @@ public class Appointment {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         if (status == null) {
-            status = AppointmentStatus.PENDING;
+            status = AppointmentStatus.SCHEDULED;
         }
     }
 }
