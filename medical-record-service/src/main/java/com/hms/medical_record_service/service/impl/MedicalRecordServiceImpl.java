@@ -2,13 +2,18 @@ package com.hms.medical_record_service.service.impl;
 
 import com.hms.medical_record_service.client.DoctorClient;
 import com.hms.medical_record_service.client.PatientClient;
+import com.hms.medical_record_service.dto.DoctorDTO;
 import com.hms.medical_record_service.dto.MedicalRecordDTO;
+import com.hms.medical_record_service.dto.PatientDTO;
 import com.hms.medical_record_service.exception.ResourceNotFoundException;
 import com.hms.medical_record_service.model.MedicalRecord;
 import com.hms.medical_record_service.repository.MedicalRecordRepository;
+import com.hms.medical_record_service.security.UserContext;
 import com.hms.medical_record_service.service.MedicalRecordService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -20,9 +25,14 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
     private final MedicalRecordRepository repository;
     private final PatientClient patientClient;
     private final DoctorClient doctorClient;
+    private final UserContext userContext;
 
     @Override
     public MedicalRecordDTO createRecord(MedicalRecordDTO dto) {
+
+        if (userContext.isPatient()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Patients cannot create medical records.");
+        }
 
         try {
             patientClient.getPatientById(dto.getPatientId());
@@ -30,11 +40,17 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
             throw new ResourceNotFoundException("Patient not found with ID: " + dto.getPatientId());
         }
 
-
+        DoctorDTO doctor;
         try {
-            doctorClient.getDoctorById(dto.getDoctorId());
+            doctor = doctorClient.getDoctorById(dto.getDoctorId());
         } catch (Exception e) {
             throw new ResourceNotFoundException("Doctor not found with ID: " + dto.getDoctorId());
+        }
+
+        if (userContext.isDoctor()) {
+            if (!doctor.getEmail().equals(userContext.getLoggedInEmail())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You cannot create records for other doctors.");
+            }
         }
 
         MedicalRecord record = new MedicalRecord();
@@ -52,17 +68,41 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
     public MedicalRecordDTO getRecordById(Long id) {
         MedicalRecord record = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Medical Record not found with ID: " + id));
+
+        String email = userContext.getLoggedInEmail();
+
+        if (userContext.isAdmin()) return mapToDTO(record);
+
+        if (userContext.isPatient()) {
+            PatientDTO patient = patientClient.getPatientById(record.getPatientId());
+            if (!patient.getEmail().equals(email)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Not your record.");
+            }
+        }
+
+        if (userContext.isDoctor()) {
+            DoctorDTO doc = doctorClient.getDoctorById(record.getDoctorId());
+            if (!doc.getEmail().equals(email)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You did not create this record.");
+            }
+        }
+
         return mapToDTO(record);
     }
 
     @Override
     public List<MedicalRecordDTO> getPatientHistory(Long patientId) {
 
-        try {
-            patientClient.getPatientById(patientId);
-        } catch (Exception e) {
+        if (userContext.isAdmin()) {
+            return repository.findByPatientId(patientId).stream()
+                    .map(this::mapToDTO).collect(Collectors.toList());
+        }
 
-            throw new ResourceNotFoundException("Patient not found with ID: " + patientId);
+        if (userContext.isPatient()) {
+            PatientDTO patient = patientClient.getPatientById(patientId);
+            if (!patient.getEmail().equals(userContext.getLoggedInEmail())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You can only view your own history.");
+            }
         }
 
 
@@ -78,22 +118,36 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
 
     @Override
     public MedicalRecordDTO updateRecord(Long id, MedicalRecordDTO dto) {
-        MedicalRecord existing = repository.findById(id)
+        MedicalRecord record = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Medical Record not found with ID: " + id));
 
-        existing.setDiagnosis(dto.getDiagnosis());
-        existing.setPrescription(dto.getPrescription());
-        existing.setDoctorNotes(dto.getDoctorNotes());
+        if (userContext.isPatient()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Patients cannot update medical records.");
+        }
 
-        return mapToDTO(repository.save(existing));
+        if (userContext.isDoctor()) {
+            DoctorDTO doc = doctorClient.getDoctorById(record.getDoctorId());
+            if (!doc.getEmail().equals(userContext.getLoggedInEmail())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You did not create this record.");
+            }
+        }
+
+        record.setDiagnosis(dto.getDiagnosis());
+        record.setPrescription(dto.getPrescription());
+        record.setDoctorNotes(dto.getDoctorNotes());
+
+        return mapToDTO(repository.save(record));
     }
 
     @Override
     public void deleteRecord(Long id) {
-        if (!repository.existsById(id)) {
-            throw new ResourceNotFoundException("Medical Record not found with ID: " + id);
+        if (!userContext.isAdmin()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Only Admins can delete records.");
         }
-        repository.deleteById(id);
+
+        MedicalRecord record = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Medical Record not found with ID: " + id));
+        repository.delete(record);
     }
 
     private MedicalRecordDTO mapToDTO(MedicalRecord record) {
