@@ -10,12 +10,15 @@ import com.hms.appointment_service.exception.ResourceNotFoundException;
 import com.hms.appointment_service.model.Appointment;
 import com.hms.appointment_service.model.AppointmentStatus;
 import com.hms.appointment_service.repository.AppointmentRepository;
+import com.hms.appointment_service.security.UserContext;
 import com.hms.appointment_service.service.AppointmentService;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -28,11 +31,19 @@ public class AppointmentServiceImpl implements AppointmentService {
     private final PatientClient patientClient;
     private final DoctorClient doctorClient;
     private final RabbitTemplate rabbitTemplate;
+    private final UserContext userContext;
 
     @Override
     @Transactional
     @CircuitBreaker(name = "doctor-service-breaker", fallbackMethod = "doctorServiceFallback")
     public AppointmentDTO createAppointment(AppointmentDTO dto) {
+
+        if (userContext.isPatient()) {
+            PatientDTO patientCheck = patientClient.getPatientById(dto.getPatientId());
+            if (!patientCheck.getEmail().equals(userContext.getLoggedInEmail())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You cannot book appointments for others.");
+            }
+        }
 
         PatientDTO patient = patientClient.getPatientById(dto.getPatientId());
         DoctorDTO doctor = doctorClient.getDoctorById(dto.getDoctorId());
@@ -72,28 +83,68 @@ public class AppointmentServiceImpl implements AppointmentService {
     public AppointmentDTO getAppointmentById(Long id) {
         Appointment appointment = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with ID: " + id));
+
+        validateAccess(appointment);
+
         return mapToDTO(appointment);
     }
 
     @Override
     public List<AppointmentDTO> getAllAppointments() {
+        if (!userContext.isAdmin()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Only Admins can view all appointments.");
+        }
         return repository.findAll().stream().map(this::mapToDTO).collect(Collectors.toList());
     }
 
     @Override
     public List<AppointmentDTO> getAppointmentsByPatientId(Long patientId) {
-        return repository.findByPatientId(patientId).stream().map(this::mapToDTO).collect(Collectors.toList());
+        if (userContext.isAdmin()) {
+            return repository.findByPatientId(patientId).stream()
+                    .map(this::mapToDTO).collect(Collectors.toList());
+        }
+
+        if (userContext.isPatient()) {
+            PatientDTO patient = patientClient.getPatientById(patientId);
+
+            if (!patient.getEmail().equals(userContext.getLoggedInEmail())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You can only view your own appointments.");
+            }
+
+            return repository.findByPatientId(patientId).stream()
+                    .map(this::mapToDTO).collect(Collectors.toList());
+        }
+
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Doctors cannot view all patient appointments directly.");
     }
 
     @Override
     public List<AppointmentDTO> getAppointmentsByDoctorId(Long doctorId) {
-        return repository.findByDoctorId(doctorId).stream().map(this::mapToDTO).collect(Collectors.toList());
+        if (userContext.isAdmin()) {
+            return repository.findByDoctorId(doctorId).stream()
+                    .map(this::mapToDTO).collect(Collectors.toList());
+        }
+
+        if (userContext.isDoctor()) {
+            DoctorDTO doctor = doctorClient.getDoctorById(doctorId);
+
+            if (!doctor.getEmail().equals(userContext.getLoggedInEmail())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You can only view your own schedule.");
+            }
+
+            return repository.findByDoctorId(doctorId).stream()
+                    .map(this::mapToDTO).collect(Collectors.toList());
+        }
+
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Patients cannot view doctor schedules directly.");
     }
 
     @Override
     public AppointmentDTO updateAppointment(Long id, AppointmentDTO dto) {
         Appointment existing = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with ID: " + id));
+
+        validateAccess(existing);
 
         boolean doctorChanged = dto.getDoctorId() != null && !dto.getDoctorId().equals(existing.getDoctorId());
         boolean timeChanged = dto.getAppointmentTime() != null && !dto.getAppointmentTime().equals(existing.getAppointmentTime());
@@ -145,6 +196,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         Appointment existing = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with ID: " + id));
 
+        validateAccess(existing);
 
         if (existing.getStatus() == AppointmentStatus.CANCELLED) {
             return;
@@ -173,5 +225,23 @@ public class AppointmentServiceImpl implements AppointmentService {
         dto.setReasonForVisit(appointment.getReasonForVisit());
         dto.setStatus(appointment.getStatus());
         return dto;
+    }
+    private void validateAccess(Appointment appt) {
+
+        if (userContext.isAdmin()) return;
+
+        String email = userContext.getLoggedInEmail();
+
+        if (userContext.isPatient() && !appt.getPatientEmail().equals(email)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: This is not your appointment.");
+        }
+
+        if (userContext.isDoctor()) {
+
+            DoctorDTO doc = doctorClient.getDoctorById(appt.getDoctorId());
+            if (!doc.getEmail().equals(email)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You are not assigned to this appointment.");
+            }
+        }
     }
 }
