@@ -4,9 +4,12 @@ import com.hms.patient_service.dto.PatientDTO;
 import com.hms.patient_service.exception.ResourceNotFoundException;
 import com.hms.patient_service.model.Patient;
 import com.hms.patient_service.repository.PatientRepository;
+import com.hms.patient_service.security.UserContext;
 import com.hms.patient_service.service.PatientService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -16,9 +19,23 @@ import java.util.stream.Collectors;
 public class PatientServiceImpl implements PatientService {
 
     private final PatientRepository patientRepository;
+    private final UserContext userContext;
 
     @Override
     public PatientDTO createPatient(PatientDTO patientDTO) {
+
+        if (userContext.isAdmin()) {
+
+        }
+        else if (userContext.isPatient()) {
+            if (!patientDTO.getEmail().equals(userContext.getLoggedInEmail())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You cannot create a profile for another email.");
+            }
+        }
+
+        else {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Doctors cannot create patients.");
+        }
         Patient patient = new Patient();
         patient.setFirstName(patientDTO.getFirstName());
         patient.setLastName(patientDTO.getLastName());
@@ -52,6 +69,13 @@ public class PatientServiceImpl implements PatientService {
     public PatientDTO getPatientById(Long id) {
         Patient patient = patientRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Patient not found with ID: " + id));
+
+        if (userContext.isAdmin()) return mapToDTO(patient);
+
+        if (userContext.isPatient() && !patient.getEmail().equals(userContext.getLoggedInEmail())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You can only view your own profile.");
+        }
+
         return mapToDTO(patient);
     }
 
@@ -59,6 +83,10 @@ public class PatientServiceImpl implements PatientService {
     public PatientDTO updatePatient(Long id, PatientDTO patientDTO) {
         Patient existing = patientRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Patient not found with ID: " + id));
+
+        if (userContext.isPatient() && !existing.getEmail().equals(userContext.getLoggedInEmail())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You can only update your own profile.");
+        }
 
         existing.setFirstName(patientDTO.getFirstName());
         existing.setLastName(patientDTO.getLastName());
@@ -76,6 +104,9 @@ public class PatientServiceImpl implements PatientService {
     public void deletePatient(Long id) {
         if (!patientRepository.existsById(id)) {
             throw new ResourceNotFoundException("Patient not found with ID: " + id);
+        }
+        if (!userContext.isAdmin()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Only Admins can delete patients.");
         }
         patientRepository.deleteById(id);
     }
