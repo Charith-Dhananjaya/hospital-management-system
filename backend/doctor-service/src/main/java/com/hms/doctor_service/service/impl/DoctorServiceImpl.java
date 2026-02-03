@@ -52,11 +52,16 @@ public class DoctorServiceImpl implements DoctorService {
 
     @Override
     public List<DoctorDTO> getAllDoctors() {
-        if (!userContext.isAdmin()) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Only Admins can view the full doctor list.");
+        // All authenticated users can view the public doctor list (needed for booking)
+        // Admin sees full details, others see public info only
+        if (userContext.isAdmin()) {
+            return doctorRepository.findAll().stream()
+                    .map(this::mapToDTO)
+                    .collect(Collectors.toList());
         }
+        // Return public info for patients and doctors (for booking purposes)
         return doctorRepository.findAll().stream()
-                .map(this::mapToDTO)
+                .map(this::mapToPublicDTO)
                 .collect(Collectors.toList());
     }
 
