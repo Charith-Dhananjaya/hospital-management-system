@@ -26,10 +26,10 @@ public class PatientServiceImpl implements PatientService {
 
         if (userContext.isAdmin()) {
 
-        }
-        else if (userContext.isPatient()) {
+        } else if (userContext.isPatient()) {
             if (!patientDTO.getEmail().equals(userContext.getLoggedInEmail())) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You cannot create a profile for another email.");
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Access Denied: You cannot create a profile for another email.");
             }
         }
 
@@ -70,10 +70,12 @@ public class PatientServiceImpl implements PatientService {
         Patient patient = patientRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Patient not found with ID: " + id));
 
-        if (userContext.isAdmin()) return mapToDTO(patient);
+        if (userContext.isAdmin())
+            return mapToDTO(patient);
 
         if (userContext.isPatient() && !patient.getEmail().equals(userContext.getLoggedInEmail())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You can only view your own profile.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Access Denied: You can only view your own profile.");
         }
 
         return mapToDTO(patient);
@@ -85,13 +87,15 @@ public class PatientServiceImpl implements PatientService {
                 .orElseThrow(() -> new ResourceNotFoundException("Patient not found with ID: " + id));
 
         if (userContext.isPatient() && !existing.getEmail().equals(userContext.getLoggedInEmail())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You can only update your own profile.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Access Denied: You can only update your own profile.");
         }
 
         existing.setFirstName(patientDTO.getFirstName());
         existing.setLastName(patientDTO.getLastName());
         existing.setAge(patientDTO.getAge());
-        existing.setEmail(patientDTO.getEmail());
+        // existing.setEmail(patientDTO.getEmail()); // Email should not be updatable
+        // here
         existing.setPhoneNumber(patientDTO.getPhoneNumber());
         existing.setAddress(patientDTO.getAddress());
         existing.setMedicalHistory(patientDTO.getMedicalHistory());

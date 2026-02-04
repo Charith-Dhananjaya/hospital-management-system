@@ -26,11 +26,13 @@ public class DoctorServiceImpl implements DoctorService {
     public DoctorDTO createDoctor(DoctorDTO dto) {
         if (userContext.isDoctor()) {
             if (!dto.getEmail().equals(userContext.getLoggedInEmail())) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You cannot create a profile for another email.");
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Access Denied: You cannot create a profile for another email.");
             }
         } else if (!userContext.isAdmin()) {
 
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Only Doctors and Admins can create doctor profiles.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Access Denied: Only Doctors and Admins can create doctor profiles.");
         }
 
         Optional<Doctor> existingDoctor = doctorRepository.findByEmail(dto.getEmail());
@@ -70,18 +72,27 @@ public class DoctorServiceImpl implements DoctorService {
         Doctor doctor = doctorRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor not found with ID: " + id));
 
+        // Admin sees full details
         if (userContext.isAdmin()) {
             return mapToDTO(doctor);
         }
 
+        // Doctor can see their own full profile
         if (userContext.isDoctor()) {
-            if (!doctor.getEmail().equals(userContext.getLoggedInEmail())) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You can only view your own profile.");
+            if (doctor.getEmail().equals(userContext.getLoggedInEmail())) {
+                return mapToDTO(doctor);
             }
-            return mapToDTO(doctor);
+            // Other doctors see public info only
+            return mapToPublicDTO(doctor);
         }
 
-        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You are not authorized to view this profile ID directly.");
+        // Patients can view public doctor info (needed for booking)
+        if (userContext.isPatient()) {
+            return mapToPublicDTO(doctor);
+        }
+
+        // For service-to-service calls (Feign), return public info
+        return mapToPublicDTO(doctor);
     }
 
     @Override
@@ -92,7 +103,7 @@ public class DoctorServiceImpl implements DoctorService {
         validateOwnership(existing);
         existing.setName(dto.getName());
         existing.setPhoneNumber(dto.getPhoneNumber());
-        existing.setEmail(dto.getEmail());
+        // existing.setEmail(dto.getEmail()); // Email should not be updatable here
         existing.setSpecialization(dto.getSpecialization());
         existing.setQualifications(dto.getQualifications());
         existing.setConsultationFee(dto.getConsultationFee());
@@ -115,7 +126,8 @@ public class DoctorServiceImpl implements DoctorService {
     @Override
     public void deleteDoctor(Long id) {
         if (!userContext.isAdmin()) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Only Admins can delete doctor profiles.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Access Denied: Only Admins can delete doctor profiles.");
         }
 
         if (!doctorRepository.existsById(id)) {
@@ -188,11 +200,13 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     private void validateOwnership(Doctor doctor) {
-        if (userContext.isAdmin()) return;
+        if (userContext.isAdmin())
+            return;
 
         if (userContext.isDoctor()) {
             if (!doctor.getEmail().equals(userContext.getLoggedInEmail())) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You can only modify your own profile.");
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Access Denied: You can only modify your own profile.");
             }
         } else {
 

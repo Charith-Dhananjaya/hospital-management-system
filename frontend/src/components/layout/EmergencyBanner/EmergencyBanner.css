@@ -1,0 +1,120 @@
+/* ========================================
+   EMERGENCY BANNER STYLES
+   ======================================== */
+
+.emergency-banner {
+    background: linear-gradient(135deg, var(--error-500) 0%, #c53030 100%);
+    color: white;
+    padding: var(--space-3) 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.emergency-banner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.1) 50%,
+            transparent 100%);
+    animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        transform: translateX(-100%);
+    }
+
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+.emergency-banner__content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    position: relative;
+    z-index: 1;
+}
+
+@media (min-width: 768px) {
+    .emergency-banner__content {
+        flex-direction: row;
+        justify-content: space-between;
+    }
+}
+
+.emergency-banner__left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.emergency-banner__icon {
+    font-size: var(--text-lg);
+}
+
+.emergency-banner__icon--pulse {
+    animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.7;
+        transform: scale(1.1);
+    }
+}
+
+.emergency-banner__text {
+    font-size: var(--text-sm);
+}
+
+.emergency-banner__text strong {
+    font-weight: var(--font-bold);
+}
+
+.emergency-banner__right {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.emergency-banner__link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: white;
+    text-decoration: none;
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    transition: opacity var(--transition-fast);
+}
+
+.emergency-banner__link:hover {
+    opacity: 0.9;
+}
+
+.emergency-banner__link--emergency {
+    background-color: rgba(255, 255, 255, 0.2);
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-full);
+    font-weight: var(--font-bold);
+}
+
+.emergency-banner__divider {
+    color: rgba(255, 255, 255, 0.5);
+}

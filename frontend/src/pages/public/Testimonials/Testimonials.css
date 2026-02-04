@@ -1,0 +1,108 @@
+/* ========================================
+   TESTIMONIALS PAGE STYLES
+   ======================================== */
+
+.testimonials-page {
+    padding-top: 70px;
+}
+
+.testimonials-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+}
+
+@media (min-width: 768px) {
+    .testimonials-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .testimonials-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.testimonial-card {
+    background-color: var(--bg-elevated);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+    transition: all var(--transition-normal);
+}
+
+.testimonial-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+}
+
+.testimonial-card__quote {
+    color: var(--primary-200);
+    margin-bottom: var(--space-4);
+}
+
+[data-theme="dark"] .testimonial-card__quote {
+    color: var(--primary-400);
+    opacity: 0.5;
+}
+
+.testimonial-card__text {
+    font-size: var(--text-base);
+    color: var(--text-secondary);
+    line-height: var(--leading-relaxed);
+    font-style: italic;
+    margin-bottom: var(--space-4);
+}
+
+.testimonial-card__rating {
+    display: flex;
+    gap: var(--space-1);
+    margin-bottom: var(--space-4);
+}
+
+.testimonial-card__rating svg {
+    color: var(--border-medium);
+}
+
+.testimonial-card__rating svg.filled {
+    color: var(--warning-500);
+    fill: var(--warning-500);
+}
+
+.testimonial-card__footer {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--border-light);
+}
+
+.testimonial-card__avatar {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--primary-500), var(--secondary-500));
+    color: white;
+    font-size: var(--text-lg);
+    font-weight: var(--font-bold);
+    border-radius: var(--radius-full);
+}
+
+.testimonial-card__info {
+    display: flex;
+    flex-direction: column;
+}
+
+.testimonial-card__name {
+    font-size: var(--text-base);
+    font-weight: var(--font-semibold);
+    color: var(--text-primary);
+}
+
+.testimonial-card__dept {
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+}

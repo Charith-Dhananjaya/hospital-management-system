@@ -11,8 +11,7 @@ import { doctorApi } from '../../../api/doctorApi';
 import ComingSoon from '../../../components/common/ComingSoon';
 import Loader from '../../../components/common/Loader';
 import '../patient/PatientDashboard.css';
-
-// Dashboard Home with real data
+import DoctorSettings from './DoctorSettings';
 function DashboardHome() {
     const { user } = useAuth();
     const [loading, setLoading] = useState(true);
@@ -327,18 +326,7 @@ function Schedule() {
     );
 }
 
-// Settings - Coming Soon
-function Settings() {
-    return (
-        <div className="dashboard-content">
-            <ComingSoon
-                title="Settings"
-                message="Account settings and preferences will be available here soon."
-                showBack={false}
-            />
-        </div>
-    );
-}
+
 
 function DoctorDashboard() {
     const location = useLocation();
@@ -419,7 +407,7 @@ function DoctorDashboard() {
                     <Route path="appointments" element={<Appointments />} />
                     <Route path="patients" element={<Patients />} />
                     <Route path="schedule" element={<Schedule />} />
-                    <Route path="settings" element={<Settings />} />
+                    <Route path="settings" element={<DoctorSettings />} />
                 </Routes>
             </main>
         </div>

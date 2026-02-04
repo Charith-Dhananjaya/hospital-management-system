@@ -12,9 +12,9 @@ import { doctorApi } from '../../../api/doctorApi';
 import ComingSoon from '../../../components/common/ComingSoon';
 import Loader from '../../../components/common/Loader';
 import CompleteProfile from '../../../components/dashboard/CompleteProfile';
-import './PatientDashboard.css';
+import PatientSettings from './PatientSettings';
 
-// Dashboard Home with real data
+import './PatientDashboard.css';
 function DashboardHome() {
     const { user } = useAuth();
     const navigate = useNavigate();
@@ -287,7 +287,28 @@ function Appointments() {
 
             if (patientId) {
                 const response = await appointmentApi.getByPatient(patientId);
-                setAppointments(response.data || []);
+                const appointmentsData = response.data || [];
+
+                // Fetch doctor details for each appointment
+                const enrichedAppointments = await Promise.all(
+                    appointmentsData.map(async (apt) => {
+                        if (apt.doctorId) {
+                            try {
+                                const doctorResponse = await doctorApi.getById(apt.doctorId);
+                                return {
+                                    ...apt,
+                                    doctorName: doctorResponse.data?.name || 'Doctor'
+                                };
+                            } catch (err) {
+                                console.log('Failed to fetch doctor:', err);
+                                return { ...apt, doctorName: 'Doctor' };
+                            }
+                        }
+                        return { ...apt, doctorName: 'Doctor' };
+                    })
+                );
+
+                setAppointments(enrichedAppointments);
             } else {
                 setAppointments([]);
             }
@@ -401,18 +422,7 @@ function MedicalRecords() {
     );
 }
 
-// Settings - Coming Soon
-function Settings() {
-    return (
-        <div className="dashboard-content">
-            <ComingSoon
-                title="Settings"
-                message="Account settings and preferences will be available here soon."
-                showBack={false}
-            />
-        </div>
-    );
-}
+
 
 function PatientDashboard() {
     const location = useLocation();
@@ -497,7 +507,7 @@ function PatientDashboard() {
                     <Route index element={<DashboardHome />} />
                     <Route path="appointments" element={<Appointments />} />
                     <Route path="records" element={<MedicalRecords />} />
-                    <Route path="settings" element={<Settings />} />
+                    <Route path="settings" element={<PatientSettings />} />
                 </Routes>
             </main>
         </div>
