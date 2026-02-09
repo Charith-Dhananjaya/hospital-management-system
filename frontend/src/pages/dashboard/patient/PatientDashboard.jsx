@@ -66,8 +66,27 @@ function DashboardHome() {
                     new Date(apt.appointmentTime) <= now || apt.status === 'COMPLETED'
                 );
 
+                // Fetch doctor details for upcoming appointments
+                const enrichedUpcoming = await Promise.all(
+                    upcoming.slice(0, 3).map(async (apt) => {
+                        if (apt.doctorId) {
+                            try {
+                                const doctorResponse = await doctorApi.getById(apt.doctorId);
+                                return {
+                                    ...apt,
+                                    doctorName: doctorResponse.data?.name || 'Doctor'
+                                };
+                            } catch (err) {
+                                console.log('Failed to fetch doctor:', err);
+                                return { ...apt, doctorName: 'Doctor' };
+                            }
+                        }
+                        return { ...apt, doctorName: 'Doctor' };
+                    })
+                );
+
                 setData({
-                    appointments: upcoming.slice(0, 3), // Show only 3 upcoming
+                    appointments: enrichedUpcoming,
                     upcomingCount: upcoming.length,
                     pastCount: past.length,
                 });
@@ -429,6 +448,19 @@ function PatientDashboard() {
     const navigate = useNavigate();
     const { user, logout } = useAuth();
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [profilePic, setProfilePic] = useState(null);
+
+    useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const res = await patientApi.getMyProfile();
+                setProfilePic(res.data?.profilePicture);
+            } catch (err) {
+                console.log("Failed to load profile picture");
+            }
+        };
+        fetchProfile();
+    }, []);
 
     const handleLogout = () => {
         logout();
@@ -468,7 +500,15 @@ function PatientDashboard() {
 
                 <div className="sidebar-user">
                     <div className="sidebar-user__avatar">
-                        {user?.name?.charAt(0) || 'P'}
+                        {profilePic ? (
+                            <img
+                                src={profilePic}
+                                alt="Profile"
+                                style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+                            />
+                        ) : (
+                            user?.name?.charAt(0) || 'P'
+                        )}
                     </div>
                     <div className="sidebar-user__info">
                         <span className="sidebar-user__name">{user?.name || 'Patient'}</span>

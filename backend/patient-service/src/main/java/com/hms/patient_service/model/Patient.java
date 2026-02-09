@@ -9,7 +9,7 @@ import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "patients" )
+@Table(name = "patients")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -37,16 +37,19 @@ public class Patient {
 
     private String medicalHistory;
 
+    @Column(columnDefinition = "TEXT")
+    private String profilePicture;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
     @PrePersist
-    protected void onCreate(){
+    protected void onCreate() {
         createdAt = LocalDateTime.now();
     }
 
     @PreUpdate
-    protected void onUpdate(){
+    protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
 }

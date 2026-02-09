@@ -14,6 +14,7 @@ function PatientSettings() {
         firstName: '',
         lastName: '',
         email: '',
+        profilePicture: '',
         age: '',
         phoneNumber: '',
         address: '',
@@ -34,6 +35,7 @@ function PatientSettings() {
                 firstName: data.firstName || '',
                 lastName: data.lastName || '',
                 email: data.email || '',
+                profilePicture: data.profilePicture || '',
                 age: data.age || '',
                 phoneNumber: data.phoneNumber || '',
                 address: data.address || '',
@@ -50,6 +52,27 @@ function PatientSettings() {
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleImageUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            if (file.size > 800 * 1024) { // 800KB limit
+                setError('Image size should be less than 800KB');
+                return;
+            }
+            if (!file.type.startsWith('image/')) {
+                setError('Please upload an image file');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setFormData(prev => ({ ...prev, profilePicture: reader.result }));
+                setError('');
+            };
+            reader.readAsDataURL(file);
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -177,6 +200,40 @@ function PatientSettings() {
                     </div>
 
                     <div className="form-group">
+                        <label htmlFor="profilePicture">Profile Picture</label>
+                        <input
+                            type="file"
+                            id="profilePicture"
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            style={{ display: 'none' }}
+                        />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                            <label htmlFor="profilePicture" className="btn btn-secondary" style={{ cursor: 'pointer', padding: '8px 16px', border: '1px solid #ccc', borderRadius: '4px', background: '#f9fafb' }}>
+                                Choose Image
+                            </label>
+                            {formData.profilePicture && (
+                                <div style={{ position: 'relative' }}>
+                                    <img
+                                        src={formData.profilePicture}
+                                        alt="Profile Preview"
+                                        style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #ddd' }}
+                                        onError={(e) => e.target.style.display = 'none'}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData(prev => ({ ...prev, profilePicture: '' }))}
+                                        style={{ position: 'absolute', top: '-5px', right: '-5px', background: 'red', color: 'white', border: 'none', borderRadius: '50%', width: '18px', height: '18px', fontSize: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                    >
+                                        X
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                        <small style={{ color: '#666', display: 'block', marginTop: '5px' }}>Max size: 800KB</small>
+                    </div>
+
+                    <div className="form-group">
                         <label htmlFor="medicalHistory">Medical History</label>
                         <textarea
                             id="medicalHistory"
@@ -195,8 +252,8 @@ function PatientSettings() {
                         {saving ? 'Saving...' : 'Save Changes'}
                     </button>
                 </form>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 }
 

@@ -28,6 +28,8 @@ function Appointments() {
     const [loading, setLoading] = useState(false);
     const [submitted, setSubmitted] = useState(false);
     const [error, setError] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedSpecialization, setSelectedSpecialization] = useState('');
 
     const [formData, setFormData] = useState({
         department: '',
@@ -39,6 +41,9 @@ function Appointments() {
         patientPhone: '',
         reasonForVisit: '',
     });
+
+    // Extract unique specializations
+    const specializations = [...new Set(doctors.map(doc => doc.specialization))];
 
     useEffect(() => {
         fetchDoctors();
@@ -63,6 +68,12 @@ function Appointments() {
         }
     };
 
+    const filteredDoctors = doctors.filter(doc => {
+        const matchesSearch = doc.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSpec = selectedSpecialization ? doc.specialization === selectedSpecialization : true;
+        return matchesSearch && matchesSpec;
+    });
+
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
@@ -73,6 +84,10 @@ function Appointments() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        // Prevent submission if not on the final step (e.g., pressing Enter in search)
+        if (step !== 3) return;
+
         setLoading(true);
         setError(null);
 
@@ -194,23 +209,78 @@ function Appointments() {
                         {step === 1 && (
                             <div className="appointment-form__step">
                                 <h2><FiUser /> Select a Doctor</h2>
-                                <div className="form-group">
-                                    <label className="form-label">Choose Doctor *</label>
-                                    <select
-                                        name="doctorId"
-                                        value={formData.doctorId}
-                                        onChange={handleChange}
-                                        className="form-select"
-                                        required
-                                    >
-                                        <option value="">Select a doctor...</option>
-                                        {doctors.map((doc) => (
-                                            <option key={doc.id} value={doc.id}>
-                                                {doc.name} - {doc.specialization}
-                                            </option>
-                                        ))}
-                                    </select>
+
+                                <div className="doctor-filters">
+                                    <div className="form-group">
+                                        <label className="form-label">Specialization</label>
+                                        <select
+                                            className="form-select"
+                                            value={selectedSpecialization}
+                                            onChange={(e) => setSelectedSpecialization(e.target.value)}
+                                        >
+                                            <option value="">All Specializations</option>
+                                            {specializations.map(spec => (
+                                                <option key={spec} value={spec}>{spec}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="form-group" style={{ flex: 1 }}>
+                                        <label className="form-label">Search Doctor</label>
+                                        <input
+                                            type="text"
+                                            placeholder="Search by name..."
+                                            className="form-input"
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') e.preventDefault();
+                                            }}
+                                        />
+                                    </div>
                                 </div>
+
+                                <div className="doctor-grid-container">
+                                    <label className="form-label">Available Doctors *</label>
+
+                                    {filteredDoctors.length === 0 ? (
+                                        <div className="empty-state-message">
+                                            <div className="empty-state-icon"><FiUser /></div>
+                                            <p>No doctors found.</p>
+                                            <small>{doctors.length === 0 ? "No doctors are registered in the system yet." : "Try adjusting your filters."}</small>
+                                        </div>
+                                    ) : (
+                                        <div className="doctor-grid">
+                                            {filteredDoctors.map((doc) => (
+                                                <div
+                                                    key={doc.id}
+                                                    className={`doctor-card ${formData.doctorId == doc.id ? 'selected' : ''}`}
+                                                    onClick={() => {
+                                                        setFormData(prev => ({ ...prev, doctorId: doc.id }));
+                                                    }}
+                                                >
+                                                    <div className="doctor-card__avatar">
+                                                        {doc.profilePicture ? (
+                                                            <img src={doc.profilePicture} alt={doc.name} />
+                                                        ) : (
+                                                            <div className="avatar-placeholder">{doc.name.charAt(0)}</div>
+                                                        )}
+                                                        {formData.doctorId == doc.id && (
+                                                            <div className="selected-indicator"><FiCheck /></div>
+                                                        )}
+                                                    </div>
+                                                    <div className="doctor-card__info">
+                                                        <h4>{doc.name}</h4>
+                                                        <span className="doctor-specialization">{doc.specialization}</span>
+                                                        {doc.consultationFee && (
+                                                            <span className="doctor-fee">${doc.consultationFee}</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
                                 <div className="appointment-form__actions">
                                     <button type="button" onClick={nextStep} className="btn btn-primary" disabled={!formData.doctorId}>
                                         Continue

@@ -8,13 +8,19 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { appointmentApi } from '../../../api/appointmentApi';
 import { doctorApi } from '../../../api/doctorApi';
+import { patientApi } from '../../../api/patientApi';
+import { medicalRecordApi } from '../../../api/medicalRecordApi';
 import ComingSoon from '../../../components/common/ComingSoon';
 import Loader from '../../../components/common/Loader';
+import { CompleteDoctorProfile } from '../../../components/dashboard/CompleteProfile';
+import CompleteAppointmentModal from '../../../components/dashboard/CompleteAppointmentModal';
 import '../patient/PatientDashboard.css';
 import DoctorSettings from './DoctorSettings';
 function DashboardHome() {
     const { user } = useAuth();
     const [loading, setLoading] = useState(true);
+    const [needsProfile, setNeedsProfile] = useState(false);
+    const [doctorProfile, setDoctorProfile] = useState(null);
     const [data, setData] = useState({
         todayAppointments: [],
         totalPatients: 0,
@@ -28,32 +34,74 @@ function DashboardHome() {
 
     const fetchDashboardData = async () => {
         setLoading(true);
+        setNeedsProfile(false);
         try {
-            const response = await appointmentApi.getByDoctor(user?.id);
-            const appointments = response.data || [];
+            // First, get doctor profile to get the correct doctor ID
+            let doctorId = null;
+            try {
+                const profileResponse = await doctorApi.getMyProfile();
+                doctorId = profileResponse.data?.id;
+                setDoctorProfile(profileResponse.data);
+            } catch (profileErr) {
+                console.log('No doctor profile found or not logged in:', profileErr);
+                // Check if it's a 404 - means profile doesn't exist
+                if (profileErr.response?.status === 404) {
+                    setNeedsProfile(true);
+                    setLoading(false);
+                    return;
+                }
+            }
 
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const tomorrow = new Date(today);
-            tomorrow.setDate(tomorrow.getDate() + 1);
+            if (doctorId) {
+                const response = await appointmentApi.getByDoctor(doctorId);
+                const appointments = response.data || [];
 
-            const todaysAppts = appointments.filter(apt => {
-                const aptDate = new Date(apt.appointmentTime);
-                return aptDate >= today && aptDate < tomorrow;
-            });
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const tomorrow = new Date(today);
+                tomorrow.setDate(tomorrow.getDate() + 1);
 
-            const completed = todaysAppts.filter(apt => apt.status === 'COMPLETED');
-            const pending = todaysAppts.filter(apt => apt.status !== 'COMPLETED' && apt.status !== 'CANCELLED');
+                const todaysAppts = appointments.filter(apt => {
+                    const aptDate = new Date(apt.appointmentTime);
+                    return aptDate >= today && aptDate < tomorrow;
+                });
 
-            // Get unique patients
-            const uniquePatients = new Set(appointments.map(apt => apt.patientId));
+                // Fetch patient details for today's appointments
+                const enrichedTodaysAppts = await Promise.all(
+                    todaysAppts.map(async (apt) => {
+                        if (apt.patientId) {
+                            try {
+                                const patientRes = await patientApi.getById(apt.patientId);
+                                return { ...apt, patientName: patientRes.data?.firstName + ' ' + patientRes.data?.lastName || 'Patient' };
+                            } catch (e) {
+                                return { ...apt, patientName: 'Patient' };
+                            }
+                        }
+                        return { ...apt, patientName: 'Patient' };
+                    })
+                );
 
-            setData({
-                todayAppointments: todaysAppts,
-                totalPatients: uniquePatients.size,
-                completedToday: completed.length,
-                pendingToday: pending.length,
-            });
+                const completed = enrichedTodaysAppts.filter(apt => apt.status === 'COMPLETED');
+                const pending = enrichedTodaysAppts.filter(apt => apt.status !== 'COMPLETED' && apt.status !== 'CANCELLED');
+
+                // Get unique patients
+                const uniquePatients = new Set(appointments.map(apt => apt.patientId));
+
+                setData({
+                    todayAppointments: enrichedTodaysAppts,
+                    totalPatients: uniquePatients.size,
+                    completedToday: completed.length,
+                    pendingToday: pending.length,
+                });
+            } else {
+                setData({
+                    todayAppointments: [],
+                    totalPatients: 0,
+                    completedToday: 0,
+                    pendingToday: 0,
+                });
+            }
+
         } catch (err) {
             console.log('Failed to fetch doctor data:', err);
             setData({
@@ -67,6 +115,13 @@ function DashboardHome() {
         }
     };
 
+    const handleProfileComplete = (profile) => {
+        console.log('Profile completed:', profile);
+        setDoctorProfile(profile);
+        setNeedsProfile(false);
+        fetchDashboardData();
+    };
+
     const formatTime = (dateString) => {
         return new Date(dateString).toLocaleTimeString('en-US', {
             hour: '2-digit',
@@ -78,6 +133,19 @@ function DashboardHome() {
         return (
             <div className="dashboard-content dashboard-loading">
                 <Loader text="Loading dashboard..." />
+            </div>
+        );
+    }
+
+    // Show profile completion form if doctor profile doesn't exist
+    if (needsProfile) {
+        return (
+            <div className="dashboard-content">
+                <CompleteDoctorProfile
+                    onComplete={handleProfileComplete}
+                    userName={user?.name}
+                    userEmail={user?.email}
+                />
             </div>
         );
     }
@@ -199,6 +267,8 @@ function Appointments() {
     const [loading, setLoading] = useState(true);
     const [appointments, setAppointments] = useState([]);
     const [filter, setFilter] = useState('all');
+    const [selectedAppointment, setSelectedAppointment] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     useEffect(() => {
         fetchAppointments();
@@ -207,13 +277,82 @@ function Appointments() {
     const fetchAppointments = async () => {
         setLoading(true);
         try {
-            const response = await appointmentApi.getByDoctor(user?.id);
-            setAppointments(response.data || []);
+            // First, get doctor profile to get the correct doctor ID
+            let doctorId = null;
+            try {
+                const profileResponse = await doctorApi.getMyProfile();
+                doctorId = profileResponse.data?.id;
+            } catch (profileErr) {
+                console.log('No doctor profile found:', profileErr);
+            }
+
+            if (doctorId) {
+                const response = await appointmentApi.getByDoctor(doctorId);
+                const appointmentsData = response.data || [];
+
+                // Fetch patient details for all appointments
+                const enrichedAppointments = await Promise.all(
+                    appointmentsData.map(async (apt) => {
+                        if (apt.patientId) {
+                            try {
+                                const patientRes = await patientApi.getById(apt.patientId);
+                                return { ...apt, patientName: patientRes.data?.firstName + ' ' + patientRes.data?.lastName || 'Patient' };
+                            } catch (e) {
+                                return { ...apt, patientName: 'Patient' };
+                            }
+                        }
+                        return { ...apt, patientName: 'Patient' };
+                    })
+                );
+
+                setAppointments(enrichedAppointments);
+            } else {
+                setAppointments([]);
+            }
         } catch (err) {
             console.log('Failed to fetch appointments:', err);
             setAppointments([]);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleCompleteClick = (apt) => {
+        setSelectedAppointment(apt);
+        setIsModalOpen(true);
+    };
+
+    const handleModalComplete = async (id, data) => {
+        try {
+            // 1. Create Medical Record
+            // Need doctorId and patientId. 
+            // selectedAppointment has the enriched patient details including patientId
+            // And we can use user.id or fetch profile again, but best to rely on what we have.
+            // Actually, we must ensure we have the correct doctorId (profile ID).
+            // Simplest way: use the appointment.doctorId which we know is correct.
+
+            if (selectedAppointment) {
+                await medicalRecordApi.create({
+                    appointmentId: id,
+                    patientId: selectedAppointment.patientId,
+                    doctorId: selectedAppointment.doctorId,
+                    diagnosis: data.diagnosis,
+                    prescription: data.prescription,
+                    doctorNotes: data.doctorNotes
+                });
+            }
+
+            // 2. Update Appointment Status
+            await appointmentApi.update(id, {
+                status: 'COMPLETED'
+            });
+
+            console.log('Medical Info Saved:', data);
+            setIsModalOpen(false);
+            fetchAppointments(); // Refresh list
+        } catch (error) {
+            console.error('Failed to complete appointment:', error);
+            alert('Failed to update appointment. Please try again.');
         }
     };
 
@@ -283,8 +422,19 @@ function Appointments() {
                                 </p>
                                 <p className="appointment-reason">{apt.reasonForVisit || 'General Consultation'}</p>
                             </div>
-                            <div className={`appointment-card__status status-${apt.status?.toLowerCase() || 'scheduled'}`}>
-                                {apt.status || 'Scheduled'}
+                            <div className="appointment-card__actions" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div className={`appointment-card__status status-${apt.status?.toLowerCase() || 'scheduled'}`}>
+                                    {apt.status || 'Scheduled'}
+                                </div>
+                                {apt.status !== 'COMPLETED' && apt.status !== 'CANCELLED' && (
+                                    <button
+                                        className="btn btn-sm btn-primary"
+                                        style={{ padding: '4px 12px', fontSize: '12px' }}
+                                        onClick={() => handleCompleteClick(apt)}
+                                    >
+                                        Complete
+                                    </button>
+                                )}
                             </div>
                         </div>
                     ))}
@@ -296,6 +446,13 @@ function Appointments() {
                     <p>{filter === 'all' ? "You don't have any appointments yet." : `No ${filter} appointments.`}</p>
                 </div>
             )}
+
+            <CompleteAppointmentModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onComplete={handleModalComplete}
+                appointment={selectedAppointment}
+            />
         </div>
     );
 }
@@ -333,6 +490,19 @@ function DoctorDashboard() {
     const navigate = useNavigate();
     const { user, logout } = useAuth();
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [profilePic, setProfilePic] = useState(null);
+
+    useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const res = await doctorApi.getMyProfile();
+                setProfilePic(res.data?.profilePicture);
+            } catch (err) {
+                console.log("Failed to load profile picture");
+            }
+        };
+        fetchProfile();
+    }, []);
 
     const handleLogout = () => {
         logout();
@@ -370,7 +540,17 @@ function DoctorDashboard() {
                 </div>
 
                 <div className="sidebar-user">
-                    <div className="sidebar-user__avatar">{user?.name?.charAt(0) || 'D'}</div>
+                    <div className="sidebar-user__avatar">
+                        {profilePic ? (
+                            <img
+                                src={profilePic}
+                                alt="Profile"
+                                style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+                            />
+                        ) : (
+                            user?.name?.charAt(0) || 'D'
+                        )}
+                    </div>
                     <div className="sidebar-user__info">
                         <span className="sidebar-user__name">Dr. {user?.name || 'Doctor'}</span>
                         <span className="sidebar-user__role">Doctor</span>

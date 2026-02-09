@@ -47,6 +47,7 @@ public class DoctorServiceImpl implements DoctorService {
         doctor.setQualifications(dto.getQualifications());
         doctor.setConsultationFee(dto.getConsultationFee());
         doctor.setIsAvailable(dto.getIsAvailable());
+        doctor.setProfilePicture(dto.getProfilePicture());
 
         Doctor savedDoctor = doctorRepository.save(doctor);
         return mapToDTO(savedDoctor);
@@ -72,28 +73,28 @@ public class DoctorServiceImpl implements DoctorService {
         Doctor doctor = doctorRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor not found with ID: " + id));
 
-        // Admin sees full details
+        if (userContext.getLoggedInRole() == null || userContext.getLoggedInRole().isBlank()) {
+            return mapToPublicDTO(doctor);
+        }
+
         if (userContext.isAdmin()) {
             return mapToDTO(doctor);
         }
 
-        // Doctor can see their own full profile
         if (userContext.isDoctor()) {
             if (doctor.getEmail().equals(userContext.getLoggedInEmail())) {
                 return mapToDTO(doctor);
             }
-            // Other doctors see public info only
             return mapToPublicDTO(doctor);
         }
 
-        // Patients can view public doctor info (needed for booking)
         if (userContext.isPatient()) {
             return mapToPublicDTO(doctor);
         }
 
-        // For service-to-service calls (Feign), return public info
         return mapToPublicDTO(doctor);
     }
+
 
     @Override
     public DoctorDTO updateDoctor(Long id, DoctorDTO dto) {
@@ -107,6 +108,9 @@ public class DoctorServiceImpl implements DoctorService {
         existing.setSpecialization(dto.getSpecialization());
         existing.setQualifications(dto.getQualifications());
         existing.setConsultationFee(dto.getConsultationFee());
+        if (dto.getProfilePicture() != null) {
+            existing.setProfilePicture(dto.getProfilePicture());
+        }
 
         Doctor updated = doctorRepository.save(existing);
         return mapToDTO(updated);
@@ -182,6 +186,7 @@ public class DoctorServiceImpl implements DoctorService {
         dto.setQualifications(doctor.getQualifications());
         dto.setConsultationFee(doctor.getConsultationFee());
         dto.setIsAvailable(doctor.getIsAvailable());
+        dto.setProfilePicture(doctor.getProfilePicture());
         dto.setCreatedAt(doctor.getCreatedAt());
         dto.setUpdatedAt(doctor.getUpdatedAt());
         return dto;
@@ -195,6 +200,7 @@ public class DoctorServiceImpl implements DoctorService {
         dto.setQualifications(doctor.getQualifications());
         dto.setConsultationFee(doctor.getConsultationFee());
         dto.setIsAvailable(doctor.getIsAvailable());
+        dto.setProfilePicture(doctor.getProfilePicture());
 
         return dto;
     }

@@ -74,9 +74,8 @@ public class AppointmentServiceImpl implements AppointmentService {
         return mapToDTO(savedAppointment);
     }
     public AppointmentDTO doctorServiceFallback(AppointmentDTO dto, Throwable t) {
-        System.out.println("⚠️ Circuit Breaker Tripped! Doctor Service is unreachable.");
-
-        throw new ResourceNotFoundException("Doctor Service is currently down. Please try again later. (Circuit Breaker Active)");
+        System.out.println("⚠️ Doctor service call failed: " + t.getClass().getName() + " - " + t.getMessage());
+        throw new RuntimeException("Doctor service call failed: " + t.getMessage(), t);
     }
 
     @Override

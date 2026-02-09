@@ -44,6 +44,7 @@ public class PatientServiceImpl implements PatientService {
         patient.setPhoneNumber(patientDTO.getPhoneNumber());
         patient.setAddress(patientDTO.getAddress());
         patient.setMedicalHistory(patientDTO.getMedicalHistory());
+        patient.setProfilePicture(patientDTO.getProfilePicture());
 
         Patient savedPatient = patientRepository.save(patient);
 
@@ -99,6 +100,9 @@ public class PatientServiceImpl implements PatientService {
         existing.setPhoneNumber(patientDTO.getPhoneNumber());
         existing.setAddress(patientDTO.getAddress());
         existing.setMedicalHistory(patientDTO.getMedicalHistory());
+        if (patientDTO.getProfilePicture() != null) {
+            existing.setProfilePicture(patientDTO.getProfilePicture());
+        }
 
         Patient updated = patientRepository.save(existing);
         return mapToDTO(updated);
@@ -133,6 +137,7 @@ public class PatientServiceImpl implements PatientService {
         dto.setPhoneNumber(patient.getPhoneNumber());
         dto.setAddress(patient.getAddress());
         dto.setMedicalHistory(patient.getMedicalHistory());
+        dto.setProfilePicture(patient.getProfilePicture());
         dto.setCreatedAt(patient.getCreatedAt());
         dto.setUpdatedAt(patient.getUpdatedAt());
         return dto;

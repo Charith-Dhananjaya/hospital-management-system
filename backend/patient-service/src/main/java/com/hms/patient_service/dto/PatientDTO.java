@@ -23,6 +23,8 @@ public class PatientDTO {
 
     private String medicalHistory;
 
+    private String profilePicture;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

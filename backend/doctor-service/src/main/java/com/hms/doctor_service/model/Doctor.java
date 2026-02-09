@@ -36,16 +36,19 @@ public class Doctor {
     @NotNull
     private Boolean isAvailable;
 
+    @Column(columnDefinition = "TEXT")
+    private String profilePicture;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
     @PrePersist
-    protected void onCreate(){
+    protected void onCreate() {
         createdAt = LocalDateTime.now();
     }
 
     @PreUpdate
-    protected void onUpdate(){
+    protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
 }

@@ -15,6 +15,7 @@ public class DoctorDTO {
     private String qualifications;
     private double consultationFee;
     private Boolean isAvailable;
+    private String profilePicture;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
