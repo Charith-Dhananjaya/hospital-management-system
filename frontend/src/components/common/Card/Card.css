@@ -1,0 +1,65 @@
+/* Card Component Styles */
+
+.card-component {
+    background-color: var(--bg-elevated);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.card-component--hover:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+}
+
+.card-component--clickable {
+    cursor: pointer;
+}
+
+.card-component--flat {
+    box-shadow: none;
+}
+
+.card-component--elevated {
+    box-shadow: var(--shadow-md);
+}
+
+/* Padding variants */
+.card-component--padding-none {
+    padding: 0;
+}
+
+.card-component--padding-sm {
+    padding: var(--space-4);
+}
+
+.card-component--padding-md {
+    padding: var(--space-6);
+}
+
+.card-component--padding-lg {
+    padding: var(--space-8);
+}
+
+/* Card sections */
+.card-component__header {
+    padding: var(--space-4) var(--space-6);
+    border-bottom: 1px solid var(--border-light);
+}
+
+.card-component__body {
+    padding: var(--space-6);
+}
+
+.card-component__footer {
+    padding: var(--space-4) var(--space-6);
+    border-top: 1px solid var(--border-light);
+    background-color: var(--bg-secondary);
+}
+
+/* Dark mode */
+[data-theme="dark"] .card-component {
+    background-color: rgba(30, 41, 59, 0.8);
+    backdrop-filter: blur(10px);
+}

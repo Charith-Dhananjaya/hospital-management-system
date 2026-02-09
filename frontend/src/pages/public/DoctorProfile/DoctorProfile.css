@@ -1,0 +1,292 @@
+/* ========================================
+   DOCTOR PROFILE PAGE STYLES
+   ======================================== */
+
+.doctor-profile-page {
+    padding-top: 70px;
+}
+
+/* Header */
+.doctor-profile-header {
+    background: linear-gradient(135deg, var(--primary-50), var(--secondary-50));
+    padding: var(--space-8) 0;
+}
+
+[data-theme="dark"] .doctor-profile-header {
+    background: linear-gradient(135deg, rgba(0, 119, 182, 0.1), rgba(0, 180, 216, 0.1));
+}
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-6);
+    transition: color var(--transition-fast);
+}
+
+.back-link:hover {
+    color: var(--primary-500);
+}
+
+.doctor-profile-header__content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    align-items: center;
+    text-align: center;
+}
+
+@media (min-width: 768px) {
+    .doctor-profile-header__content {
+        flex-direction: row;
+        text-align: left;
+    }
+}
+
+.doctor-profile-header__avatar {
+    width: 140px;
+    height: 140px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--primary-500), var(--secondary-500));
+    color: white;
+    font-size: var(--text-4xl);
+    font-weight: var(--font-bold);
+    border-radius: var(--radius-full);
+    border: 4px solid white;
+    box-shadow: var(--shadow-lg);
+    flex-shrink: 0;
+}
+
+.doctor-profile-header__info {
+    flex: 1;
+}
+
+.doctor-profile-header__info h1 {
+    font-size: var(--text-3xl);
+    font-weight: var(--font-bold);
+    color: var(--text-primary);
+    margin-bottom: var(--space-2);
+}
+
+.doctor-profile-header__specialty {
+    font-size: var(--text-lg);
+    color: var(--primary-500);
+    font-weight: var(--font-medium);
+    margin-bottom: var(--space-1);
+}
+
+.doctor-profile-header__qualifications {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    margin-bottom: var(--space-4);
+}
+
+.doctor-profile-header__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    justify-content: center;
+}
+
+@media (min-width: 768px) {
+    .doctor-profile-header__meta {
+        justify-content: flex-start;
+    }
+}
+
+.doctor-profile-header__meta span {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+}
+
+.available-badge {
+    background-color: var(--success-100);
+    color: var(--success-600);
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-full);
+    font-weight: var(--font-medium);
+}
+
+/* Content Grid */
+.doctor-profile-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-8);
+}
+
+@media (min-width: 1024px) {
+    .doctor-profile-grid {
+        grid-template-columns: 2fr 1fr;
+    }
+}
+
+/* Profile Sections */
+.profile-section {
+    background-color: var(--bg-elevated);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+    margin-bottom: var(--space-6);
+}
+
+.profile-section h2 {
+    font-size: var(--text-xl);
+    font-weight: var(--font-semibold);
+    color: var(--text-primary);
+    margin-bottom: var(--space-4);
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--border-light);
+}
+
+.profile-section p {
+    color: var(--text-secondary);
+    line-height: var(--leading-relaxed);
+}
+
+/* Education */
+.education-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.education-item {
+    display: flex;
+    gap: var(--space-4);
+}
+
+.education-year {
+    flex-shrink: 0;
+    padding: var(--space-1) var(--space-3);
+    background-color: var(--primary-100);
+    color: var(--primary-600);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    border-radius: var(--radius-sm);
+    height: fit-content;
+}
+
+[data-theme="dark"] .education-year {
+    background-color: rgba(0, 119, 182, 0.2);
+    color: var(--primary-300);
+}
+
+.education-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.education-degree {
+    font-weight: var(--font-semibold);
+    color: var(--text-primary);
+}
+
+.education-institution {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+}
+
+/* Specialties */
+.specialties-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.specialty-tag {
+    padding: var(--space-2) var(--space-4);
+    background-color: var(--bg-tertiary);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    border-radius: var(--radius-full);
+}
+
+/* Sidebar */
+.sidebar-card {
+    background-color: var(--bg-elevated);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-xl);
+    padding: var(--space-5);
+    margin-bottom: var(--space-4);
+}
+
+.sidebar-card h3 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-base);
+    font-weight: var(--font-semibold);
+    color: var(--text-primary);
+    margin-bottom: var(--space-4);
+}
+
+.contact-info p {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    margin-bottom: var(--space-2);
+}
+
+/* Availability */
+.availability-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.availability-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: var(--text-sm);
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.availability-item:last-child {
+    border-bottom: none;
+}
+
+.availability-item .day {
+    font-weight: var(--font-medium);
+    color: var(--text-primary);
+}
+
+.availability-item .time {
+    color: var(--text-secondary);
+}
+
+/* Fee Card */
+.fee-card {
+    text-align: center;
+    background: linear-gradient(135deg, var(--primary-500), var(--secondary-500));
+    color: white;
+}
+
+.fee-card .fee-label {
+    display: block;
+    font-size: var(--text-sm);
+    opacity: 0.9;
+    margin-bottom: var(--space-2);
+}
+
+.fee-card .fee-amount {
+    display: block;
+    font-size: var(--text-4xl);
+    font-weight: var(--font-bold);
+}
+
+.fee-card .fee-note {
+    display: block;
+    font-size: var(--text-xs);
+    opacity: 0.8;
+}

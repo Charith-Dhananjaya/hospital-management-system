@@ -26,11 +26,13 @@ public class DoctorServiceImpl implements DoctorService {
     public DoctorDTO createDoctor(DoctorDTO dto) {
         if (userContext.isDoctor()) {
             if (!dto.getEmail().equals(userContext.getLoggedInEmail())) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You cannot create a profile for another email.");
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Access Denied: You cannot create a profile for another email.");
             }
         } else if (!userContext.isAdmin()) {
 
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Only Doctors and Admins can create doctor profiles.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Access Denied: Only Doctors and Admins can create doctor profiles.");
         }
 
         Optional<Doctor> existingDoctor = doctorRepository.findByEmail(dto.getEmail());
@@ -45,6 +47,7 @@ public class DoctorServiceImpl implements DoctorService {
         doctor.setQualifications(dto.getQualifications());
         doctor.setConsultationFee(dto.getConsultationFee());
         doctor.setIsAvailable(dto.getIsAvailable());
+        doctor.setProfilePicture(dto.getProfilePicture());
 
         Doctor savedDoctor = doctorRepository.save(doctor);
         return mapToDTO(savedDoctor);
@@ -70,19 +73,28 @@ public class DoctorServiceImpl implements DoctorService {
         Doctor doctor = doctorRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor not found with ID: " + id));
 
+        if (userContext.getLoggedInRole() == null || userContext.getLoggedInRole().isBlank()) {
+            return mapToPublicDTO(doctor);
+        }
+
         if (userContext.isAdmin()) {
             return mapToDTO(doctor);
         }
 
         if (userContext.isDoctor()) {
-            if (!doctor.getEmail().equals(userContext.getLoggedInEmail())) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You can only view your own profile.");
+            if (doctor.getEmail().equals(userContext.getLoggedInEmail())) {
+                return mapToDTO(doctor);
             }
-            return mapToDTO(doctor);
+            return mapToPublicDTO(doctor);
         }
 
-        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You are not authorized to view this profile ID directly.");
+        if (userContext.isPatient()) {
+            return mapToPublicDTO(doctor);
+        }
+
+        return mapToPublicDTO(doctor);
     }
+
 
     @Override
     public DoctorDTO updateDoctor(Long id, DoctorDTO dto) {
@@ -92,10 +104,13 @@ public class DoctorServiceImpl implements DoctorService {
         validateOwnership(existing);
         existing.setName(dto.getName());
         existing.setPhoneNumber(dto.getPhoneNumber());
-        existing.setEmail(dto.getEmail());
+        // existing.setEmail(dto.getEmail()); // Email should not be updatable here
         existing.setSpecialization(dto.getSpecialization());
         existing.setQualifications(dto.getQualifications());
         existing.setConsultationFee(dto.getConsultationFee());
+        if (dto.getProfilePicture() != null) {
+            existing.setProfilePicture(dto.getProfilePicture());
+        }
 
         Doctor updated = doctorRepository.save(existing);
         return mapToDTO(updated);
@@ -115,7 +130,8 @@ public class DoctorServiceImpl implements DoctorService {
     @Override
     public void deleteDoctor(Long id) {
         if (!userContext.isAdmin()) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Only Admins can delete doctor profiles.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Access Denied: Only Admins can delete doctor profiles.");
         }
 
         if (!doctorRepository.existsById(id)) {
@@ -170,6 +186,7 @@ public class DoctorServiceImpl implements DoctorService {
         dto.setQualifications(doctor.getQualifications());
         dto.setConsultationFee(doctor.getConsultationFee());
         dto.setIsAvailable(doctor.getIsAvailable());
+        dto.setProfilePicture(doctor.getProfilePicture());
         dto.setCreatedAt(doctor.getCreatedAt());
         dto.setUpdatedAt(doctor.getUpdatedAt());
         return dto;
@@ -183,16 +200,19 @@ public class DoctorServiceImpl implements DoctorService {
         dto.setQualifications(doctor.getQualifications());
         dto.setConsultationFee(doctor.getConsultationFee());
         dto.setIsAvailable(doctor.getIsAvailable());
+        dto.setProfilePicture(doctor.getProfilePicture());
 
         return dto;
     }
 
     private void validateOwnership(Doctor doctor) {
-        if (userContext.isAdmin()) return;
+        if (userContext.isAdmin())
+            return;
 
         if (userContext.isDoctor()) {
             if (!doctor.getEmail().equals(userContext.getLoggedInEmail())) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You can only modify your own profile.");
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Access Denied: You can only modify your own profile.");
             }
         } else {
 

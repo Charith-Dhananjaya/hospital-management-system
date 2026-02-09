@@ -6,9 +6,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
 // name = "DOCTOR-SERVICE" must match the name on Eureka Dashboard
-@FeignClient(name = "DOCTOR-SERVICE")
+@FeignClient(name = "DOCTOR-SERVICE", configuration = com.hms.appointment_service.config.FeignConfig.class)
 public interface DoctorClient {
-
     @GetMapping("/api/doctors/{id}")
     DoctorDTO getDoctorById(@PathVariable("id") Long id);
 }

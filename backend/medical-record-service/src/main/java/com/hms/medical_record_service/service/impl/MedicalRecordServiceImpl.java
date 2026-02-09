@@ -40,16 +40,27 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
             throw new ResourceNotFoundException("Patient not found with ID: " + dto.getPatientId());
         }
 
-        DoctorDTO doctor;
+        // Verify doctor exists
         try {
-            doctor = doctorClient.getDoctorById(dto.getDoctorId());
+            doctorClient.getDoctorById(dto.getDoctorId());
         } catch (Exception e) {
             throw new ResourceNotFoundException("Doctor not found with ID: " + dto.getDoctorId());
         }
 
         if (userContext.isDoctor()) {
-            if (!doctor.getEmail().equals(userContext.getLoggedInEmail())) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You cannot create records for other doctors.");
+            // Verify logged in doctor matches the record's doctor ID
+            try {
+                DoctorDTO loggedInDoctor = doctorClient.getProfile(userContext.getLoggedInEmail());
+                if (!loggedInDoctor.getId().equals(dto.getDoctorId())) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                            "Access Denied: You cannot create records for other doctors.");
+                }
+            } catch (Exception e) {
+                // If we can't fetch profile or ID mismatch
+                if (e instanceof ResponseStatusException)
+                    throw e;
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to verify doctor identity",
+                        e);
             }
         }
 
@@ -71,7 +82,8 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
 
         String email = userContext.getLoggedInEmail();
 
-        if (userContext.isAdmin()) return mapToDTO(record);
+        if (userContext.isAdmin())
+            return mapToDTO(record);
 
         if (userContext.isPatient()) {
             PatientDTO patient = patientClient.getPatientById(record.getPatientId());
@@ -83,7 +95,8 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
         if (userContext.isDoctor()) {
             DoctorDTO doc = doctorClient.getDoctorById(record.getDoctorId());
             if (!doc.getEmail().equals(email)) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You did not create this record.");
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Access Denied: You did not create this record.");
             }
         }
 
@@ -101,10 +114,10 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
         if (userContext.isPatient()) {
             PatientDTO patient = patientClient.getPatientById(patientId);
             if (!patient.getEmail().equals(userContext.getLoggedInEmail())) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You can only view your own history.");
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Access Denied: You can only view your own history.");
             }
         }
-
 
         return repository.findByPatientId(patientId).stream()
                 .map(this::mapToDTO)
@@ -128,7 +141,8 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
         if (userContext.isDoctor()) {
             DoctorDTO doc = doctorClient.getDoctorById(record.getDoctorId());
             if (!doc.getEmail().equals(userContext.getLoggedInEmail())) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You did not create this record.");
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Access Denied: You did not create this record.");
             }
         }
 

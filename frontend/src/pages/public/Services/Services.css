@@ -1,0 +1,157 @@
+/* ========================================
+   SERVICES PAGE STYLES
+   ======================================== */
+
+.services-page {
+    padding-top: 70px;
+}
+
+/* ========== Services Intro ========== */
+.services-intro__content {
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.services-intro__content h2 {
+    font-size: var(--text-3xl);
+    font-weight: var(--font-bold);
+    color: var(--text-primary);
+    margin-bottom: var(--space-4);
+}
+
+.services-intro__content p {
+    font-size: var(--text-lg);
+    color: var(--text-secondary);
+    line-height: var(--leading-relaxed);
+}
+
+/* ========== Departments Grid ========== */
+.departments-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+}
+
+@media (min-width: 768px) {
+    .departments-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1280px) {
+    .departments-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.department-detail-card {
+    background-color: var(--bg-elevated);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-6);
+    transition: all var(--transition-normal);
+    scroll-margin-top: 100px;
+}
+
+.department-detail-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+}
+
+.department-detail-card__header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+}
+
+.department-detail-card__icon {
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-xl);
+    flex-shrink: 0;
+}
+
+.department-detail-card__name {
+    font-size: var(--text-xl);
+    font-weight: var(--font-bold);
+    color: var(--text-primary);
+}
+
+.department-detail-card__description {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    line-height: var(--leading-relaxed);
+    margin-bottom: var(--space-5);
+}
+
+.department-detail-card__services {
+    margin-bottom: var(--space-5);
+}
+
+.department-detail-card__services h4 {
+    font-size: var(--text-sm);
+    font-weight: var(--font-semibold);
+    color: var(--text-primary);
+    margin-bottom: var(--space-2);
+}
+
+.department-detail-card__services ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.department-detail-card__services li {
+    padding: var(--space-1) var(--space-3);
+    background-color: var(--bg-tertiary);
+    color: var(--text-secondary);
+    font-size: var(--text-xs);
+    border-radius: var(--radius-full);
+}
+
+.department-detail-card__link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: var(--primary-500);
+    text-decoration: none;
+    transition: gap var(--transition-fast);
+}
+
+.department-detail-card__link:hover {
+    gap: var(--space-3);
+}
+
+/* ========== Services CTA ========== */
+.services-cta__content {
+    text-align: center;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.services-cta__content h2 {
+    font-size: var(--text-3xl);
+    font-weight: var(--font-bold);
+    color: var(--text-primary);
+    margin-bottom: var(--space-4);
+}
+
+.services-cta__content p {
+    font-size: var(--text-lg);
+    color: var(--text-secondary);
+    margin-bottom: var(--space-8);
+}
+
+.services-cta__actions {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+}
