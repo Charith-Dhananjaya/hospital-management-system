@@ -24,4 +24,9 @@ public class UserController {
     public LoginResponse login(@RequestBody LoginRequest loginRequest) {
         return userService.login(loginRequest);
     }
+
+    @GetMapping("/health")
+    public String health() {
+        return "User Service is Up";
+    }
 }

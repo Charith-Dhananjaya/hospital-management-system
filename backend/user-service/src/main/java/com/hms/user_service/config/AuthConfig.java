@@ -28,8 +28,7 @@ public class AuthConfig {
 
     @Bean
     public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider provider =
-                new DaoAuthenticationProvider(customUserDetailsService);
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(customUserDetailsService);
         provider.setPasswordEncoder(passwordEncoder());
         return provider;
     }
@@ -44,9 +43,8 @@ public class AuthConfig {
         return http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/register", "/auth/login").permitAll()
-                        .anyRequest().authenticated()
-                )
+                        .requestMatchers("/auth/register", "/auth/login", "/auth/health").permitAll()
+                        .anyRequest().authenticated())
                 .build();
     }
 }

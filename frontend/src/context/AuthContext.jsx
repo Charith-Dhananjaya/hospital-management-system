@@ -57,33 +57,12 @@ export function AuthProvider({ children }) {
     const [token, setToken] = useState(() => localStorage.getItem('token'));
     const [loading, setLoading] = useState(true);
 
-    // Initialize user from token
-    useEffect(() => {
-        const initAuth = async () => {
-            const savedToken = localStorage.getItem('token');
-            const savedUser = localStorage.getItem('user');
 
-            if (savedToken && savedUser) {
-                try {
-                    setToken(savedToken);
-                    setUser(JSON.parse(savedUser));
-                } catch (error) {
-                    console.error('Failed to parse saved user:', error);
-                    logout();
-                }
-            }
-            setLoading(false);
-        };
 
-        initAuth();
-    }, []);
 
     const login = useCallback(async (email, password) => {
         try {
-            console.log('🔐 Attempting login for:', email);
-            const response = await authApi.login({ email, password });
 
-            console.log('📦 Login response:', response.data);
 
             // Backend returns: { message, token, userId, name, role }
             const { token: newToken, userId, name, role, message } = response.data;
@@ -109,7 +88,7 @@ export function AuthProvider({ children }) {
             setToken(newToken);
             setUser(userData);
 
-            console.log('✅ Login successful:', userData);
+            // console.log('✅ Login successful:', userData);
             return { success: true, user: userData };
         } catch (error) {
             console.error('❌ Login failed:', error);
@@ -150,6 +129,26 @@ export function AuthProvider({ children }) {
         setUser(userData);
         localStorage.setItem('user', JSON.stringify(userData));
     }, []);
+
+    // Initialize user from token
+    useEffect(() => {
+        const savedToken = localStorage.getItem('token');
+        const savedUser = localStorage.getItem('user');
+
+        if (savedToken && savedUser) {
+            try {
+                setToken(savedToken);
+                setUser(JSON.parse(savedUser));
+            } catch (error) {
+                console.error('Failed to parse saved user:', error);
+                logout();
+            }
+        }
+
+        setLoading(false);
+    }, [logout]);
+
+
 
     const value = {
         user,
