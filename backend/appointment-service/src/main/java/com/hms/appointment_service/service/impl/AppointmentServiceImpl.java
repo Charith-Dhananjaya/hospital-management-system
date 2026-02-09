@@ -41,13 +41,13 @@ public class AppointmentServiceImpl implements AppointmentService {
         if (userContext.isPatient()) {
             PatientDTO patientCheck = patientClient.getPatientById(dto.getPatientId());
             if (!patientCheck.getEmail().equals(userContext.getLoggedInEmail())) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You cannot book appointments for others.");
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Access Denied: You cannot book appointments for others.");
             }
         }
 
         PatientDTO patient = patientClient.getPatientById(dto.getPatientId());
         DoctorDTO doctor = doctorClient.getDoctorById(dto.getDoctorId());
-
 
         Appointment appointment = new Appointment();
         appointment.setPatientId(dto.getPatientId());
@@ -64,8 +64,8 @@ public class AppointmentServiceImpl implements AppointmentService {
         AppointmentBookedEvent event = new AppointmentBookedEvent(
                 savedAppointment.getId(),
                 patient.getEmail(),
-                "Hello " + patient.getFirstName() + ", your appointment with Dr. " + doctor.getName() + " is confirmed!"
-        );
+                "Hello " + patient.getFirstName() + ", your appointment with Dr. " + doctor.getName()
+                        + " is confirmed!");
 
         // We drop the letter in the box
         rabbitTemplate.convertAndSend("internal.exchange", "internal.notification", event);
@@ -73,6 +73,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         return mapToDTO(savedAppointment);
     }
+
     public AppointmentDTO doctorServiceFallback(AppointmentDTO dto, Throwable t) {
         System.out.println("⚠️ Doctor service call failed: " + t.getClass().getName() + " - " + t.getMessage());
         throw new RuntimeException("Doctor service call failed: " + t.getMessage(), t);
@@ -91,7 +92,8 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Override
     public List<AppointmentDTO> getAllAppointments() {
         if (!userContext.isAdmin()) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Only Admins can view all appointments.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Access Denied: Only Admins can view all appointments.");
         }
         return repository.findAll().stream().map(this::mapToDTO).collect(Collectors.toList());
     }
@@ -107,14 +109,16 @@ public class AppointmentServiceImpl implements AppointmentService {
             PatientDTO patient = patientClient.getPatientById(patientId);
 
             if (!patient.getEmail().equals(userContext.getLoggedInEmail())) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You can only view your own appointments.");
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Access Denied: You can only view your own appointments.");
             }
 
             return repository.findByPatientId(patientId).stream()
                     .map(this::mapToDTO).collect(Collectors.toList());
         }
 
-        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Doctors cannot view all patient appointments directly.");
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "Access Denied: Doctors cannot view all patient appointments directly.");
     }
 
     @Override
@@ -128,14 +132,16 @@ public class AppointmentServiceImpl implements AppointmentService {
             DoctorDTO doctor = doctorClient.getDoctorById(doctorId);
 
             if (!doctor.getEmail().equals(userContext.getLoggedInEmail())) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You can only view your own schedule.");
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Access Denied: You can only view your own schedule.");
             }
 
             return repository.findByDoctorId(doctorId).stream()
                     .map(this::mapToDTO).collect(Collectors.toList());
         }
 
-        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Patients cannot view doctor schedules directly.");
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "Access Denied: Patients cannot view doctor schedules directly.");
     }
 
     @Override
@@ -146,8 +152,10 @@ public class AppointmentServiceImpl implements AppointmentService {
         validateAccess(existing);
 
         boolean doctorChanged = dto.getDoctorId() != null && !dto.getDoctorId().equals(existing.getDoctorId());
-        boolean timeChanged = dto.getAppointmentTime() != null && !dto.getAppointmentTime().equals(existing.getAppointmentTime());
-        boolean reasonChanged = dto.getReasonForVisit() != null && !dto.getReasonForVisit().equals(existing.getReasonForVisit());
+        boolean timeChanged = dto.getAppointmentTime() != null
+                && !dto.getAppointmentTime().equals(existing.getAppointmentTime());
+        boolean reasonChanged = dto.getReasonForVisit() != null
+                && !dto.getReasonForVisit().equals(existing.getReasonForVisit());
 
         if (!doctorChanged && !timeChanged && !reasonChanged) {
             return mapToDTO(existing);
@@ -171,7 +179,6 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         Appointment saved = repository.save(existing);
 
-
         if (doctorForMessage == null) {
             doctorForMessage = doctorClient.getDoctorById(saved.getDoctorId());
         }
@@ -182,8 +189,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         AppointmentBookedEvent event = new AppointmentBookedEvent(
                 saved.getId(),
                 saved.getPatientEmail(),
-                message
-        );
+                message);
 
         rabbitTemplate.convertAndSend("internal.exchange", "internal.notification", event);
 
@@ -209,8 +215,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         AppointmentBookedEvent event = new AppointmentBookedEvent(
                 saved.getId(),
                 saved.getPatientEmail(),
-                message
-        );
+                message);
 
         rabbitTemplate.convertAndSend("internal.exchange", "internal.notification", event);
     }
@@ -223,11 +228,30 @@ public class AppointmentServiceImpl implements AppointmentService {
         dto.setAppointmentTime(appointment.getAppointmentTime());
         dto.setReasonForVisit(appointment.getReasonForVisit());
         dto.setStatus(appointment.getStatus());
+
+        // Fetch Patient Name
+        try {
+            PatientDTO p = patientClient.getPatientById(appointment.getPatientId());
+            dto.setPatientName(p.getFirstName() + " " + p.getLastName());
+        } catch (Exception e) {
+            dto.setPatientName("Unknown Patient");
+        }
+
+        // Fetch Doctor Name
+        try {
+            DoctorDTO d = doctorClient.getDoctorById(appointment.getDoctorId());
+            dto.setDoctorName(d.getName());
+        } catch (Exception e) {
+            dto.setDoctorName("Unknown Doctor");
+        }
+
         return dto;
     }
+
     private void validateAccess(Appointment appt) {
 
-        if (userContext.isAdmin()) return;
+        if (userContext.isAdmin())
+            return;
 
         String email = userContext.getLoggedInEmail();
 
@@ -239,7 +263,8 @@ public class AppointmentServiceImpl implements AppointmentService {
 
             DoctorDTO doc = doctorClient.getDoctorById(appt.getDoctorId());
             if (!doc.getEmail().equals(email)) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You are not assigned to this appointment.");
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Access Denied: You are not assigned to this appointment.");
             }
         }
     }

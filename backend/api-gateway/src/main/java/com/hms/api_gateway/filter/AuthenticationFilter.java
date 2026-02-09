@@ -26,7 +26,6 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
         return (exchange, chain) -> {
             if (validator.isSecured.test(exchange.getRequest())) {
 
-
                 String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
                 if (authHeader == null || !authHeader.startsWith("Bearer ")) {
                     throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing Authorization Header");
@@ -47,14 +46,15 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
                         if (role.equals("PATIENT")) {
                             // Allowed
                         }
-                        // Scenario B: Doctors (Can only VIEW/GET patient data)
+                        // Scenario B: Doctors AND Admins (Can only VIEW/GET patient data)
                         // ✅ This fixes your issue!
-                        else if (role.equals("DOCTOR") && method.equals("GET")) {
+                        else if ((role.equals("DOCTOR") || role.equals("ADMIN")) && method.equals("GET")) {
                             // Allowed (Read-Only)
                         }
-                        // Scenario C: Everyone else (or Doctors trying to Edit)
+                        // Scenario C: Everyone else (or Doctors/Admins trying to Edit)
                         else {
-                            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Patients Only (Doctors can View)");
+                            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                    "Access Denied: Patients Only (Doctors/Admins can View)");
                         }
                     }
 
@@ -62,7 +62,7 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
                     if (path.contains("/api/doctors")) {
                         // Allow searching (GET) for everyone, but Editing is Doctor only
                         if (method.equals("GET")) {
-
+                            // Allowed for everyone
                         } else {
                             if (!role.equals("DOCTOR")) {
                                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Doctors Only");
@@ -74,7 +74,8 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
                     // Only Patients can BOOK (POST) appointments
                     if (path.contains("/api/appointments") && method.equals("POST")) {
                         if (!role.equals("PATIENT")) {
-                            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Only Patients can book appointments");
+                            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                    "Access Denied: Only Patients can book appointments");
                         }
                     }
                     // --- RULE 4: MEDICAL RECORDS ---
@@ -83,8 +84,10 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
                         // 1. STRICT WRITE PROTECTION (POST, PUT, DELETE)
                         if (method.equals("POST") || method.equals("PUT") || method.equals("DELETE")) {
                             if (!role.equals("DOCTOR")) {
-                                System.out.println("⛔ BLOCKED: " + role + " tried to " + method + " Medical Record"); // Debug log
-                                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Only Doctors can modify medical records");
+                                System.out.println("⛔ BLOCKED: " + role + " tried to " + method + " Medical Record"); // Debug
+                                                                                                                      // log
+                                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                        "Access Denied: Only Doctors can modify medical records");
                             }
                         }
 
@@ -100,6 +103,9 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
 
                     return chain.filter(exchange.mutate().request(request).build());
 
+                } catch (ResponseStatusException e) {
+                    // Ensure 403s and other specific errors are passed through correctly
+                    throw e;
                 } catch (Exception e) {
                     throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid Token or Access Denied");
                 }
@@ -108,5 +114,6 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
         };
     }
 
-    public static class Config { }
+    public static class Config {
+    }
 }
