@@ -1,8 +1,8 @@
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
     FiHome, FiUsers, FiUserPlus, FiCalendar, FiSettings,
-    FiLogOut, FiMenu, FiX, FiBarChart2, FiActivity, FiTrendingUp,
-    FiChevronRight, FiSearch
+    FiLogOut, FiMenu, FiX, FiBarChart2, FiActivity,
+    FiChevronRight
 } from 'react-icons/fi';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
@@ -31,23 +31,29 @@ function DashboardHome() {
     const fetchDashboardData = async () => {
         setLoading(true);
         try {
-            // Fetch doctors
+            // Fetch doctors count
             let doctorCount = 0;
             try {
                 const doctorsRes = await doctorApi.getAll();
                 doctorCount = doctorsRes.data?.length || 0;
-            } catch (e) { console.log('Failed to fetch doctors:', e); }
+            } catch (e) {
+                console.log('Failed to fetch doctors:', e);
+            }
 
-            // Fetch patients
+            // Fetch patients count
             let patientCount = 0;
             try {
                 const patientsRes = await patientApi.getAll();
                 patientCount = patientsRes.data?.length || 0;
-            } catch (e) { console.log('Failed to fetch patients:', e); }
+            } catch (e) {
+                console.log('Failed to fetch patients:', e);
+            }
 
-            // Fetch appointments
+            // Fetch appointments + compute today's count + enrich recent 5
             let appointments = [];
             let todayCount = 0;
+            let enrichedRecent = [];
+
             try {
                 const appointmentsRes = await appointmentApi.getAll();
                 appointments = appointmentsRes.data || [];
@@ -57,18 +63,59 @@ function DashboardHome() {
                 const tomorrow = new Date(today);
                 tomorrow.setDate(tomorrow.getDate() + 1);
 
-                todayCount = appointments.filter(apt => {
+                todayCount = appointments.filter((apt) => {
                     const aptDate = new Date(apt.appointmentTime);
                     return aptDate >= today && aptDate < tomorrow;
                 }).length;
-            } catch (e) { console.log('Failed to fetch appointments:', e); }
+
+                // Most recent 5 (if your backend already returns sorted, fine.
+                // If not, you can sort by createdAt / appointmentTime here.)
+                const recent = appointments.slice(0, 5);
+
+                enrichedRecent = await Promise.all(
+                    recent.map(async (apt) => {
+                        const patientPromise = apt.patientId
+                            ? patientApi.getById(apt.patientId)
+                            : null;
+
+                        const doctorPromise = apt.doctorId
+                            ? doctorApi.getById(apt.doctorId)
+                            : null;
+
+                        const [patientRes, doctorRes] = await Promise.allSettled([
+                            patientPromise,
+                            doctorPromise,
+                        ]);
+
+                        const patientName =
+                            patientRes.status === 'fulfilled' && patientRes.value?.data
+                                ? `${patientRes.value.data?.firstName || ''} ${patientRes.value.data?.lastName || ''}`.trim() ||
+                                patientRes.value.data?.name ||
+                                'Patient'
+                                : 'Patient';
+
+                        const doctorName =
+                            doctorRes.status === 'fulfilled' && doctorRes.value?.data
+                                ? doctorRes.value.data?.name || 'Doctor'
+                                : 'Doctor';
+
+                        return {
+                            ...apt,
+                            patientName,
+                            doctorName,
+                        };
+                    })
+                );
+            } catch (e) {
+                console.log('Failed to fetch appointments:', e);
+            }
 
             setData({
                 totalDoctors: doctorCount,
                 totalPatients: patientCount,
                 totalAppointments: appointments.length,
                 todayAppointments: todayCount,
-                recentAppointments: appointments.slice(0, 5),
+                recentAppointments: enrichedRecent,
             });
         } catch (err) {
             console.log('Failed to fetch admin data:', err);
@@ -106,6 +153,7 @@ function DashboardHome() {
                         <span className="stat-card__label">Total Doctors</span>
                     </div>
                 </div>
+
                 <div className="stat-card stat-card--success">
                     <div className="stat-card__icon">
                         <FiUserPlus />
@@ -115,6 +163,7 @@ function DashboardHome() {
                         <span className="stat-card__label">Total Patients</span>
                     </div>
                 </div>
+
                 <div className="stat-card stat-card--warning">
                     <div className="stat-card__icon">
                         <FiCalendar />
@@ -124,6 +173,7 @@ function DashboardHome() {
                         <span className="stat-card__label">Today's Appointments</span>
                     </div>
                 </div>
+
                 <div className="stat-card stat-card--info">
                     <div className="stat-card__icon">
                         <FiActivity />
@@ -154,10 +204,12 @@ function DashboardHome() {
                                         {new Date(apt.appointmentTime).toLocaleDateString('en-US', { month: 'short' })}
                                     </span>
                                 </div>
+
                                 <div className="appointment-card__info">
-                                    <h4>{apt.patientName || 'Patient'} → {apt.doctorName || 'Doctor'}</h4>
+                                    <h4>{apt.patientName} → {apt.doctorName}</h4>
                                     <p className="appointment-reason">{apt.reasonForVisit || 'General Consultation'}</p>
                                 </div>
+
                                 <div className={`appointment-card__status status-${apt.status?.toLowerCase() || 'scheduled'}`}>
                                     {apt.status || 'Scheduled'}
                                 </div>
