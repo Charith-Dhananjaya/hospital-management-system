@@ -39,8 +39,8 @@ function Login() {
     const checkServerStatus = async () => {
         setServerStatus('checking');
         try {
-            // Try the auth endpoint - it's public
-            await apiClient.post('/auth/login', {}, { timeout: 5000 });
+            // Try the health endpoint - it's public and safe
+            await apiClient.get('/auth/health', { timeout: 5000 });
             setServerStatus('online');
         } catch (err) {
             // Any response means server is reachable
@@ -51,6 +51,7 @@ function Login() {
             }
         }
     };
+
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -199,7 +200,7 @@ function Login() {
                             <button
                                 type="submit"
                                 className="btn btn-primary btn-lg"
-                                disabled={loading || serverStatus === 'offline'}
+                                disabled={loading}
                             >
                                 {loading ? 'Signing in...' : 'Sign In'}
                             </button>

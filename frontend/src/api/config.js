@@ -12,6 +12,12 @@ const apiClient = axios.create({
     },
 });
 
+let logoutHandler = null;
+
+export const setLogoutHandler = (handler) => {
+    logoutHandler = handler;
+};
+
 // Request interceptor - Add auth token and log requests
 apiClient.interceptors.request.use(
     (config) => {
@@ -20,13 +26,12 @@ apiClient.interceptors.request.use(
             config.headers.Authorization = `Bearer ${token}`;
         }
 
-        // Log request for debugging
-        console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`, config.data || '');
+
 
         return config;
     },
     (error) => {
-        console.error('❌ Request Error:', error);
+        // console.error('❌ Request Error:', error);
         return Promise.reject(error);
     }
 );
@@ -34,19 +39,19 @@ apiClient.interceptors.request.use(
 // Response interceptor - Handle common errors with detailed logging
 apiClient.interceptors.response.use(
     (response) => {
-        console.log(`✅ API Response: ${response.config.url}`, response.data);
+
         return response;
     },
     (error) => {
         // Log full error details
-        console.error('❌ API Error:', {
-            url: error.config?.url,
-            method: error.config?.method,
-            status: error.response?.status,
-            statusText: error.response?.statusText,
-            data: error.response?.data,
-            message: error.message,
-        });
+        // console.error('❌ API Error:', {
+        //     url: error.config?.url,
+        //     method: error.config?.method,
+        //     status: error.response?.status,
+        //     statusText: error.response?.statusText,
+        //     data: error.response?.data,
+        //     message: error.message,
+        // });
 
         // Handle 401 Unauthorized - token expired or invalid
         // BUT don't redirect if we're on auth pages or calling auth endpoints
@@ -57,9 +62,13 @@ apiClient.interceptors.response.use(
 
             // Only handle 401 for protected endpoints, not auth endpoints
             if (!isAuthEndpoint && !isAuthPage) {
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                window.location.href = '/login';
+                if (logoutHandler) {
+                    logoutHandler();
+                } else {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    window.location.href = '/login';
+                }
             }
         }
 

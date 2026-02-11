@@ -1,12 +1,26 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FiX, FiCheck, FiFileText, FiActivity } from 'react-icons/fi';
 import './CompleteAppointmentModal.css';
 
-const CompleteAppointmentModal = ({ isOpen, onClose, onComplete, appointment }) => {
+const CompleteAppointmentModal = ({ isOpen, onClose, onComplete, appointment, initialData }) => {
     const [diagnosis, setDiagnosis] = useState('');
     const [notes, setNotes] = useState('');
     const [prescription, setPrescription] = useState('');
     const [loading, setLoading] = useState(false);
+
+    // Initialize state when modal opens or initialData changes
+    useEffect(() => {
+        if (isOpen && initialData) {
+            setDiagnosis(initialData.diagnosis || '');
+            setNotes(initialData.doctorNotes || '');
+            setPrescription(initialData.prescription || '');
+        } else if (isOpen) {
+            // Reset if opening effectively as new
+            setDiagnosis('');
+            setNotes('');
+            setPrescription('');
+        }
+    }, [isOpen, initialData]);
 
     if (!isOpen || !appointment) return null;
 
@@ -14,26 +28,28 @@ const CompleteAppointmentModal = ({ isOpen, onClose, onComplete, appointment }) 
         e.preventDefault();
         setLoading(true);
 
-        // Simulate API delay or processing
-        await onComplete(appointment.id, {
-            diagnosis,
-            doctorNotes: notes,
-            prescription,
-            status: 'COMPLETED'
-        });
-
-        setLoading(false);
-        setDiagnosis('');
-        setNotes('');
-        setPrescription('');
-        onClose();
+        try {
+            await onComplete(appointment.id, {
+                diagnosis,
+                doctorNotes: notes,
+                prescription,
+                status: 'COMPLETED'
+            });
+            onClose();
+        } catch (error) {
+            console.error("Error in modal:", error);
+        } finally {
+            setLoading(false);
+        }
     };
+
+    const isUpdate = !!initialData;
 
     return (
         <div className="modal-overlay">
             <div className="modal-container">
                 <div className="modal-header">
-                    <h2>Complete Appointment</h2>
+                    <h2>{isUpdate ? 'Update Medical Record' : 'Complete Appointment'}</h2>
                     <button className="modal-close" onClick={onClose}>
                         <FiX />
                     </button>
@@ -94,7 +110,7 @@ const CompleteAppointmentModal = ({ isOpen, onClose, onComplete, appointment }) 
                                 Cancel
                             </button>
                             <button type="submit" className="btn btn-primary" disabled={loading}>
-                                {loading ? 'Saving...' : 'Complete Appointment'}
+                                {loading ? 'Saving...' : (isUpdate ? 'Update Record' : 'Complete Appointment')}
                             </button>
                         </div>
                     </form>

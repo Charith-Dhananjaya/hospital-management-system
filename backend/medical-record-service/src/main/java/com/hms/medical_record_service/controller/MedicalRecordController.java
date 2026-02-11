@@ -24,6 +24,11 @@ public class MedicalRecordController {
         return service.getRecordById(id);
     }
 
+    @GetMapping("/appointment/{appointmentId}")
+    public MedicalRecordDTO getByAppointmentId(@PathVariable Long appointmentId) {
+        return service.getRecordByAppointmentId(appointmentId);
+    }
+
     @GetMapping("/patient/{patientId}")
     public List<MedicalRecordDTO> getPatientHistory(@PathVariable Long patientId) {
         return service.getPatientHistory(patientId);

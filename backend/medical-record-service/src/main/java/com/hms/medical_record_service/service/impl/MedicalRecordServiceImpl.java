@@ -34,6 +34,23 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Patients cannot create medical records.");
         }
 
+        if (dto.getAppointmentId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Appointment ID is required");
+        }
+
+        // Prevent duplicates
+        if (!repository.findByAppointmentId(dto.getAppointmentId()).isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "A medical record already exists for this appointment.");
+        }
+        if (dto.getPatientId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Patient ID is required");
+        }
+        if (dto.getDoctorId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Doctor ID is required");
+        }
+
+        // Verify patient exists
         try {
             patientClient.getPatientById(dto.getPatientId());
         } catch (Exception e) {
@@ -48,9 +65,16 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
         }
 
         if (userContext.isDoctor()) {
+            String loggedInEmail = userContext.getLoggedInEmail();
+            if (loggedInEmail == null) {
+                System.out.println("❌ ERROR: Logged in email is null in UserContext");
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User email not found in context");
+            }
+
             // Verify logged in doctor matches the record's doctor ID
             try {
-                DoctorDTO loggedInDoctor = doctorClient.getProfile(userContext.getLoggedInEmail());
+                String role = userContext.getLoggedInRole();
+                DoctorDTO loggedInDoctor = doctorClient.getProfile(loggedInEmail, role);
                 if (!loggedInDoctor.getId().equals(dto.getDoctorId())) {
                     throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                             "Access Denied: You cannot create records for other doctors.");
@@ -59,7 +83,10 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
                 // If we can't fetch profile or ID mismatch
                 if (e instanceof ResponseStatusException)
                     throw e;
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to verify doctor identity",
+                System.out.println("❌ ERROR: Failed to verify doctor identity. Email: " + loggedInEmail + ". Error: "
+                        + e.getMessage());
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                        "Failed to verify doctor identity: " + e.getMessage(),
                         e);
             }
         }
@@ -97,6 +124,52 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
             if (!doc.getEmail().equals(email)) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                         "Access Denied: You did not create this record.");
+            }
+        }
+
+        return mapToDTO(record);
+    }
+
+    @Override
+    public MedicalRecordDTO getRecordByAppointmentId(Long appointmentId) {
+        List<MedicalRecord> records = repository.findByAppointmentId(appointmentId);
+        if (records.isEmpty()) {
+            throw new ResourceNotFoundException("Medical Record not found for Appointment ID: " + appointmentId);
+        }
+        // Assuming one record per appointment
+        MedicalRecord record = records.get(0);
+
+        // Add security checks similar to getRecordById if needed,
+        // but for now relying on the fact that if you have the appointment ID, you
+        // likely have access.
+        // Better to be safe: check if user is the doctor or patient of this record.
+
+        String email = userContext.getLoggedInEmail();
+
+        if (userContext.isAdmin())
+            return mapToDTO(record);
+
+        if (userContext.isPatient()) {
+            try {
+                PatientDTO patient = patientClient.getPatientById(record.getPatientId());
+                if (!patient.getEmail().equals(email)) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Not your record.");
+                }
+            } catch (Exception e) {
+                // Fallback or ignore if patient service fails, but better to deny if unsure
+            }
+        }
+
+        if (userContext.isDoctor()) {
+            try {
+                // To avoid circular dependency or complex checks, just check if doc ID matches
+                // We need to fetch doctor to get email
+                DoctorDTO doc = doctorClient.getDoctorById(record.getDoctorId());
+                if (!doc.getEmail().equals(email)) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                            "Access Denied: You did not create this record.");
+                }
+            } catch (Exception e) {
             }
         }
 

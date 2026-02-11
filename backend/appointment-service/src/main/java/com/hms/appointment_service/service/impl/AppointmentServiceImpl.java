@@ -156,9 +156,14 @@ public class AppointmentServiceImpl implements AppointmentService {
                 && !dto.getAppointmentTime().equals(existing.getAppointmentTime());
         boolean reasonChanged = dto.getReasonForVisit() != null
                 && !dto.getReasonForVisit().equals(existing.getReasonForVisit());
+        boolean statusChanged = dto.getStatus() != null && !dto.getStatus().equals(existing.getStatus());
 
-        if (!doctorChanged && !timeChanged && !reasonChanged) {
+        if (!doctorChanged && !timeChanged && !reasonChanged && !statusChanged) {
             return mapToDTO(existing);
+        }
+
+        if (statusChanged) {
+            existing.setStatus(dto.getStatus());
         }
 
         DoctorDTO doctorForMessage = null;

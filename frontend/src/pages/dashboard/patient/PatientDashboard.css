@@ -222,7 +222,7 @@
 .dashboard-main {
     flex: 1;
     padding: var(--space-6);
-    margin-top: 56px;
+    margin-top: 73px;
     overflow-x: hidden;
 }
 
@@ -475,8 +475,8 @@
 }
 
 .status-completed {
-    background-color: var(--secondary-100);
-    color: var(--secondary-700);
+    background-color: var(--success-100);
+    color: var(--success-600);
 }
 
 .status-cancelled {

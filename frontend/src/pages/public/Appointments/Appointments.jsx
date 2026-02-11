@@ -12,13 +12,7 @@ const timeSlots = [
     '02:00 PM', '02:30 PM', '03:00 PM', '03:30 PM', '04:00 PM', '04:30 PM',
 ];
 
-const mockDoctors = [
-    { id: 1, name: 'Dr. Sarah Johnson', specialization: 'Cardiology' },
-    { id: 2, name: 'Dr. Michael Chen', specialization: 'Neurology' },
-    { id: 3, name: 'Dr. Emily Rodriguez', specialization: 'Pediatrics' },
-    { id: 4, name: 'Dr. James Wilson', specialization: 'Orthopedics' },
-    { id: 5, name: 'Dr. Lisa Park', specialization: 'Dermatology' },
-];
+
 
 function Appointments() {
     const navigate = useNavigate();
@@ -63,8 +57,9 @@ function Appointments() {
         try {
             const response = await doctorApi.getAll();
             setDoctors(response.data);
-        } catch {
-            setDoctors(mockDoctors);
+        } catch (error) {
+            console.error('Failed to fetch doctors:', error);
+            setDoctors([]);
         }
     };
 
@@ -117,8 +112,14 @@ function Appointments() {
                     appointmentTime: `${formData.date}T${convertTo24Hour(formData.time)}`,
                     reasonForVisit: formData.reasonForVisit,
                 });
+
+                setSubmitted(true);
+            } else {
+                // Guest booking not supported yet, force login
+                setError('You must be logged in to book an appointment.');
+                // Optional: Redirect to login or show modal
+                // navigate('/login'); 
             }
-            setSubmitted(true);
         } catch (error) {
             console.error('Booking failed:', error);
             setError(error.response?.data?.message || 'Failed to book appointment. Please try again.');
