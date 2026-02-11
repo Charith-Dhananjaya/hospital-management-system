@@ -25,6 +25,7 @@ function DashboardHome() {
         todayAppointments: [],
         totalPatients: 0,
         completedToday: 0,
+        completedTotal: 0,
         pendingToday: 0,
     });
 
@@ -83,6 +84,7 @@ function DashboardHome() {
 
                 const completed = enrichedTodaysAppts.filter(apt => apt.status === 'COMPLETED');
                 const pending = enrichedTodaysAppts.filter(apt => apt.status !== 'COMPLETED' && apt.status !== 'CANCELLED');
+                const completedTotal = appointments.filter(apt => apt.status === 'COMPLETED').length;
 
                 // Get unique patients
                 const uniquePatients = new Set(appointments.map(apt => apt.patientId));
@@ -91,6 +93,7 @@ function DashboardHome() {
                     todayAppointments: enrichedTodaysAppts,
                     totalPatients: uniquePatients.size,
                     completedToday: completed.length,
+                    completedTotal: completedTotal,
                     pendingToday: pending.length,
                 });
             } else {
@@ -187,6 +190,15 @@ function DashboardHome() {
                     <div className="stat-card__info">
                         <span className="stat-card__value">{data.completedToday}</span>
                         <span className="stat-card__label">Completed Today</span>
+                    </div>
+                </div>
+                <div className="stat-card stat-card--info">
+                    <div className="stat-card__icon">
+                        <FiCheckCircle />
+                    </div>
+                    <div className="stat-card__info">
+                        <span className="stat-card__value">{data.completedTotal}</span>
+                        <span className="stat-card__label">Total Completed</span>
                     </div>
                 </div>
                 <div className="stat-card stat-card--info">
@@ -317,9 +329,51 @@ function Appointments() {
         }
     };
 
+    const [initialMetadata, setInitialMetadata] = useState(null);
+
     const handleCompleteClick = (apt) => {
         setSelectedAppointment(apt);
+        setInitialMetadata(null);
         setIsModalOpen(true);
+    };
+
+    const handleUpdateClick = async (apt) => {
+        setSelectedAppointment(apt);
+        setLoading(true); // Show global loading or just wait
+        try {
+            // Fetch existing medical record for this appointment.
+            // Since we don't have a direct "get by appointment id" in the API definition I saw,
+            // we might need to rely on "get by patient" and filter, OR add a new endpoint.
+            // Let's assume for now we can find it via patient history or doctor history.
+            // BUT, looking at `MedicalRecordRepository`, it HAS `findByAppointmentId`.
+            // So we should add/use `medicalRecordApi.getByAppointment(apt.id)`. 
+            // I will update the API file next. For now, let's assume `getByAppointmentId` exists.
+
+            // Wait, `medicalRecordApi.js` has `getByPatient` and `getByDoctor`.
+            // I need to update `medicalRecordApi.js` to expose `findByAppointmentId` which corresponds to `.../appointment/{id}` (need to verify backend controller).
+            // Let's check backend controller first, but assuming standard:
+
+            // Actually, let's try to get it from `medicalRecordApi.getByAppointmentId(apt.id)`
+            // I need to add that function to the API first.
+            const recordRes = await medicalRecordApi.getByAppointmentId(apt.id);
+            // The backend likely returns a list or single object. 
+            // Repository returns List<MedicalRecord>. Controller likely returns List<MedicalRecordDTO>.
+            // Let's assume it returns an array properly.
+
+            const record = Array.isArray(recordRes.data) ? recordRes.data[0] : recordRes.data;
+
+            if (record) {
+                setInitialMetadata(record);
+                setIsModalOpen(true);
+            } else {
+                alert("Medical record not found.");
+            }
+        } catch (error) {
+            console.error("Failed to fetch medical record", error);
+            alert("Failed to fetch medical record details.");
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleModalComplete = async (id, data) => {
@@ -332,14 +386,44 @@ function Appointments() {
             // Simplest way: use the appointment.doctorId which we know is correct.
 
             if (selectedAppointment) {
-                await medicalRecordApi.create({
-                    appointmentId: id,
-                    patientId: selectedAppointment.patientId,
-                    doctorId: selectedAppointment.doctorId,
-                    diagnosis: data.diagnosis,
-                    prescription: data.prescription,
-                    doctorNotes: data.doctorNotes
-                });
+                // Check if we are updating an existing record or creating a new one
+                // If the appointment is already completed, we are likely updating
+                const isUpdate = selectedAppointment.status === 'COMPLETED';
+
+                if (isUpdate) {
+                    // We need the medical record ID to update. 
+                    // It was stored in initialMetadata when we clicked "Update"
+                    if (initialMetadata && initialMetadata.id) {
+                        await medicalRecordApi.update(initialMetadata.id, {
+                            diagnosis: data.diagnosis,
+                            prescription: data.prescription,
+                            doctorNotes: data.doctorNotes
+                        });
+                    } else {
+                        // Fallback: try to find the record by appointment ID if ID is missing from state
+                        const recordRes = await medicalRecordApi.getByAppointmentId(id);
+                        const record = Array.isArray(recordRes.data) ? recordRes.data[0] : recordRes.data;
+                        if (record && record.id) {
+                            await medicalRecordApi.update(record.id, {
+                                diagnosis: data.diagnosis,
+                                prescription: data.prescription,
+                                doctorNotes: data.doctorNotes
+                            });
+                        } else {
+                            console.error("Cannot update: Record ID not found");
+                            throw new Error("Medical record ID not found for update.");
+                        }
+                    }
+                } else {
+                    await medicalRecordApi.create({
+                        appointmentId: id,
+                        patientId: selectedAppointment.patientId,
+                        doctorId: selectedAppointment.doctorId,
+                        diagnosis: data.diagnosis,
+                        prescription: data.prescription,
+                        doctorNotes: data.doctorNotes
+                    });
+                }
             }
 
             // 2. Update Appointment Status
@@ -352,7 +436,8 @@ function Appointments() {
             fetchAppointments(); // Refresh list
         } catch (error) {
             console.error('Failed to complete appointment:', error);
-            alert('Failed to update appointment. Please try again.');
+            const errorMessage = error.response?.data?.message || error.message || 'Failed to update appointment. Please try again.';
+            alert(`Failed: ${errorMessage}`);
         }
     };
 
@@ -435,6 +520,15 @@ function Appointments() {
                                         Complete
                                     </button>
                                 )}
+                                {apt.status === 'COMPLETED' && (
+                                    <button
+                                        className="btn btn-sm btn-outline-primary"
+                                        style={{ padding: '4px 12px', fontSize: '12px', borderColor: '#007bff', color: '#007bff' }}
+                                        onClick={() => handleUpdateClick(apt)}
+                                    >
+                                        Update
+                                    </button>
+                                )}
                             </div>
                         </div>
                     ))}
@@ -449,22 +543,213 @@ function Appointments() {
 
             <CompleteAppointmentModal
                 isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
+                onClose={() => {
+                    setIsModalOpen(false);
+                    setSelectedAppointment(null);
+                    setInitialMetadata(null);
+                }}
                 onComplete={handleModalComplete}
                 appointment={selectedAppointment}
+                initialData={initialMetadata}
             />
         </div>
     );
 }
 
-// Patients - Coming Soon
+// Patients - List of patients with medical history
 function Patients() {
+    const [patients, setPatients] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedPatient, setSelectedPatient] = useState(null);
+    const [patientRecords, setPatientRecords] = useState([]);
+    const [recordsLoading, setRecordsLoading] = useState(false);
+
+    // For Update flow in Patients tab
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedApt, setSelectedApt] = useState(null);
+    const [initialData, setInitialData] = useState(null);
+
+    useEffect(() => {
+        fetchPatients();
+    }, []);
+
+    const fetchPatients = async () => {
+        setLoading(true);
+        try {
+            // Get current doctor's profile to get ID
+            const profileRes = await doctorApi.getMyProfile();
+            const doctorId = profileRes.data.id;
+
+            // Get all appointments for this doctor to find unique patients
+            const appointmentsRes = await appointmentApi.getByDoctor(doctorId);
+            const appointments = appointmentsRes.data;
+
+            // Filter unique patients who have at least one completed appointment
+            // Or just all patients seen. Let's do all patients with at least one record.
+            const uniquePatientIds = [...new Set(appointments.map(a => a.patientId))];
+
+            // Fetch detailed patient info for each ID
+            const patientDetails = await Promise.all(
+                uniquePatientIds.map(async (pid) => {
+                    try {
+                        const pRes = await patientApi.getById(pid);
+                        // Find last visit
+                        const pAppts = appointments.filter(a => a.patientId === pid);
+                        const lastVisit = pAppts.sort((a, b) => new Date(b.appointmentTime) - new Date(a.appointmentTime))[0];
+
+                        return {
+                            ...pRes.data,
+                            lastVisit: lastVisit?.appointmentTime,
+                            appointmentCount: pAppts.length
+                        };
+                    } catch (err) {
+                        return null;
+                    }
+                })
+            );
+
+            setPatients(patientDetails.filter(p => p !== null));
+        } catch (error) {
+            console.error("Failed to fetch patients", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handlePatientClick = async (patient) => {
+        setSelectedPatient(patient);
+        setRecordsLoading(true);
+        try {
+            const res = await medicalRecordApi.getByPatient(patient.id);
+            // Filter records only for THIS doctor if needed, but usually doctor sees full history
+            // For now, show all records for this patient
+            setPatientRecords(res.data);
+        } catch (error) {
+            console.error("Failed to fetch patient records", error);
+        } finally {
+            setRecordsLoading(false);
+        }
+    };
+
+    const handleUpdateRecord = (record) => {
+        // Find the appointment details for this record
+        const mockApt = {
+            id: record.appointmentId,
+            patientId: record.patientId,
+            doctorId: record.doctorId,
+            patientName: selectedPatient.firstName + " " + selectedPatient.lastName,
+            status: 'COMPLETED'
+        };
+        setSelectedApt(mockApt);
+        setInitialData(record);
+        setIsModalOpen(true);
+    };
+
+    const onModalComplete = async (aptId, data) => {
+        try {
+            // Update the record
+            await medicalRecordApi.update(initialData.id, {
+                diagnosis: data.diagnosis,
+                prescription: data.prescription,
+                doctorNotes: data.doctorNotes
+            });
+
+            // Refresh records
+            handlePatientClick(selectedPatient);
+            alert("Record updated successfully!");
+        } catch (error) {
+            alert("Failed to update record: " + (error.response?.data?.message || error.message));
+        }
+    };
+
     return (
         <div className="dashboard-content">
-            <ComingSoon
-                title="My Patients"
-                message="Patient management and medical records will be available here soon."
-                showBack={false}
+            <div className="dashboard-page-header">
+                <div>
+                    <h1>My Patients</h1>
+                    <p>Patients you have consulted with</p>
+                </div>
+            </div>
+
+            <div className="patients-container" style={{ display: 'grid', gridTemplateColumns: selectedPatient ? '350px 1fr' : '1fr', gap: '2rem' }}>
+                {/* Patient List */}
+                <div className="patient-list-sidebar">
+                    {loading ? (
+                        <Loader text="Loading patients..." />
+                    ) : patients.length > 0 ? (
+                        <div className="patient-cards">
+                            {patients.map(patient => (
+                                <div
+                                    key={patient.id}
+                                    className={`patient-mini-card ${selectedPatient?.id === patient.id ? 'active' : ''}`}
+                                    onClick={() => handlePatientClick(patient)}
+                                    style={{
+                                        padding: '1rem',
+                                        backgroundColor: 'var(--bg-elevated)',
+                                        borderRadius: 'var(--radius-lg)',
+                                        marginBottom: '10px',
+                                        cursor: 'pointer',
+                                        border: selectedPatient?.id === patient.id ? '2px solid var(--primary-500)' : '1px solid var(--border-light)'
+                                    }}
+                                >
+                                    <h4 style={{ margin: '0 0 5px 0' }}>{patient.firstName} {patient.lastName}</h4>
+                                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0 }}>
+                                        Last Visit: {patient.lastVisit ? new Date(patient.lastVisit).toLocaleDateString() : 'N/A'}
+                                    </p>
+                                    <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{patient.email}</p>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="empty-state">No patients found.</div>
+                    )}
+                </div>
+
+                {/* Patient Detail / Records */}
+                {selectedPatient && (
+                    <div className="patient-history-detail">
+                        <div style={{ backgroundColor: 'var(--bg-elevated)', padding: '1.5rem', borderRadius: 'var(--radius-xl)', border: '1px solid var(--border-light)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                <h2>{selectedPatient.firstName} {selectedPatient.lastName}'s History</h2>
+                                <button className="btn btn-sm btn-outline" onClick={() => setSelectedPatient(null)}>Close</button>
+                            </div>
+
+                            {recordsLoading ? (
+                                <Loader text="Loading records..." />
+                            ) : patientRecords.length > 0 ? (
+                                <div className="history-timeline">
+                                    {patientRecords.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).map(record => (
+                                        <div key={record.id} style={{ padding: '1rem', borderLeft: '3px solid var(--primary-400)', marginBottom: '1.5rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: '0 var(--radius-md) var(--radius-md) 0', position: 'relative' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                                                <strong style={{ color: 'var(--primary-600)' }}>{new Date(record.createdAt).toLocaleDateString()}</strong>
+                                                <button
+                                                    className="btn btn-sm btn-link"
+                                                    style={{ color: 'var(--primary-500)', padding: 0 }}
+                                                    onClick={() => handleUpdateRecord(record)}
+                                                >
+                                                    Update Record
+                                                </button>
+                                            </div>
+                                            <p style={{ margin: '0 0 5px 0' }}><strong>Diagnosis:</strong> {record.diagnosis}</p>
+                                            <p style={{ margin: '0 0 5px 0' }}><strong>Symptoms:</strong> {record.doctorNotes}</p>
+                                            <p style={{ margin: '0' }}><strong>Prescription:</strong> {record.prescription}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p>No medical records found for this patient.</p>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            <CompleteAppointmentModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onComplete={onModalComplete}
+                appointment={selectedApt}
+                initialData={initialData}
             />
         </div>
     );

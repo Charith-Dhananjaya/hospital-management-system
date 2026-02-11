@@ -12,6 +12,12 @@ const apiClient = axios.create({
     },
 });
 
+let logoutHandler = null;
+
+export const setLogoutHandler = (handler) => {
+    logoutHandler = handler;
+};
+
 // Request interceptor - Add auth token and log requests
 apiClient.interceptors.request.use(
     (config) => {
@@ -56,8 +62,13 @@ apiClient.interceptors.response.use(
 
             // Only handle 401 for protected endpoints, not auth endpoints
             if (!isAuthEndpoint && !isAuthPage) {
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
+                if (logoutHandler) {
+                    logoutHandler();
+                } else {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    window.location.href = '/login';
+                }
             }
         }
 

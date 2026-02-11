@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authApi } from '../api/authApi';
+import { setLogoutHandler } from '../api/config';
 
 const AuthContext = createContext(null);
 
@@ -60,9 +61,10 @@ export function AuthProvider({ children }) {
 
 
 
+
     const login = useCallback(async (email, password) => {
         try {
-
+            const response = await authApi.login({ email, password });
 
             // Backend returns: { message, token, userId, name, role }
             const { token: newToken, userId, name, role, message } = response.data;
@@ -146,6 +148,12 @@ export function AuthProvider({ children }) {
         }
 
         setLoading(false);
+    }, [logout]);
+
+    // Register logout handler with API client for 401 errors
+    useEffect(() => {
+        setLogoutHandler(logout);
+        return () => setLogoutHandler(null);
     }, [logout]);
 
 

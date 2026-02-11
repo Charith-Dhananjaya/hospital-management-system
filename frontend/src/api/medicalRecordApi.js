@@ -10,6 +10,14 @@ export const medicalRecordApi = {
     },
 
     /**
+     * Get medical record by Appointment ID
+     * @param {number} appointmentId 
+     */
+    getByAppointmentId: (appointmentId) => {
+        return apiClient.get(`/api/medical-records/appointment/${appointmentId}`);
+    },
+
+    /**
      * Get medical record by ID
      * @param {number} id 
      */

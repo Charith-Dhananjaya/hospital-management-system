@@ -15,7 +15,21 @@ public class RouteValidator {
                         "/auth/health",
                         "/eureka");
 
-        public Predicate<ServerHttpRequest> isSecured = request -> openApiEndpoints
-                        .stream()
-                        .noneMatch(uri -> request.getURI().getPath().contains(uri));
+        public Predicate<ServerHttpRequest> isSecured = request -> {
+                String path = request.getURI().getPath();
+                String method = request.getMethod().name();
+
+                // Public endpoints in Doctor Service (GET only)
+                if (path.startsWith("/api/doctors") && method.equals("GET")) {
+                        // /my-profile MUST remain secured
+                        if (path.contains("/my-profile")) {
+                                return true;
+                        }
+                        return false; // Allow public access to other GET endpoints (getAll, getById, etc.)
+                }
+
+                return openApiEndpoints
+                                .stream()
+                                .noneMatch(uri -> path.contains(uri));
+        };
 }

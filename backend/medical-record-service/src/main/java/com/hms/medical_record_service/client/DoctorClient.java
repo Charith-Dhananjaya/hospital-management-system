@@ -12,5 +12,5 @@ public interface DoctorClient {
     DoctorDTO getDoctorById(@PathVariable("id") Long id);
 
     @GetMapping("/api/doctors/my-profile")
-    DoctorDTO getProfile(@RequestHeader("X-User-Email") String email);
+    DoctorDTO getProfile(@RequestHeader("X-User-Email") String email, @RequestHeader("X-User-Role") String role);
 }
